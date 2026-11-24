@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>graphite shell — player</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="pbar">
+    <button class="pbtn left" aria-label="Очередь">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+      </svg>
+    </button>
+    <div class="ptrack">#2 / 8</div>
+    <button class="pbtn right" aria-label="Инфо">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+        <rect x="10.5" y="5" width="3" height="3"/><rect x="10.5" y="10" width="3" height="9"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="art">
+    <svg class="icon" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M50 82V34l38-8v46"/>
+      <ellipse cx="41" cy="82" rx="9" ry="8"/><ellipse cx="79" cy="74" rx="9" ry="8"/>
+    </svg>
+    <div class="nocover">NO COVER</div>
+  </div>
+
+  <div class="ptitle">Звезда по имени Солнце</div>
+  <div class="psub">Кино · Группа крови</div>
+
+  <div class="edge left" aria-label="Перемешать">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+      <path d="M3 7h4l10 10h4"/><path d="M3 17h4l10-10h4"/>
+      <path d="M18 4l3 3-3 3"/><path d="M18 14l3 3-3 3"/>
+    </svg>
+  </div>
+  <div class="edge right" aria-label="Повтор">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+      <path d="M5 8h13"/><path d="M15 5l3 3-3 3"/>
+      <path d="M19 16H6"/><path d="M9 13l-3 3 3 3"/>
+    </svg>
+  </div>
+
+  <div class="prog"><i></i></div>
+  <div class="knob"></div>
+  <div class="times"><span>1:12</span><span>3:48</span></div>
+  <div class="vol">VOL 60%</div>
+
+  <div class="trans">
+    <div class="tr side">
+      <svg class="icon" viewBox="0 0 38 38" fill="currentColor" stroke="none">
+        <rect x="6" y="8" width="4" height="22"/><path d="M14 19 L30 8 V30 Z"/>
+      </svg>
+    </div>
+    <div class="tr play">
+      <svg class="icon" viewBox="0 0 38 38" fill="currentColor" stroke="none">
+        <path d="M12 7 L31 19 L12 31 Z"/>
+      </svg>
+    </div>
+    <div class="tr side">
+      <svg class="icon" viewBox="0 0 38 38" fill="currentColor" stroke="none">
+        <path d="M24 19 L8 8 V30 Z"/><rect x="28" y="8" width="4" height="22"/>
+      </svg>
+    </div>
+  </div>
+  <script src="shell.js"></script>
+</body>
+</html>

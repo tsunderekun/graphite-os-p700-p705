@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>graphite shell — settings</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="abar">
+    <a class="abtn" href="#" aria-label="Назад">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6 L7 12 L15 18"/></svg>
+    </a>
+    <div class="atitle">НАСТРОЙКИ</div>
+  </header>
+
+  <div class="setrow">
+    <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="13"/><path d="M8 21h8M12 17v4"/></svg>
+    <div class="sname">ЭКРАН</div>
+    <div class="sval">Яркость 70 % · поворот 180°</div>
+    <svg class="schev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  <div class="setrow">
+    <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.4" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <div class="sname">СЕТЬ</div>
+    <div class="sval">Wi-Fi · <phone-ip></div>
+    <svg class="schev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  <div class="setrow">
+    <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8c2 2 2 6 0 8"/></svg>
+    <div class="sname">ЗВУК</div>
+    <div class="sval">MPD · громкость 60 %</div>
+    <svg class="schev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  <div class="setrow">
+    <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="20" height="11"/><path d="M6 10h2M10 10h2M14 10h2M18 10h2M6 13h2M10 13h2M14 13h2M18 13h2"/></svg>
+    <div class="sname">КЛАВИШИ</div>
+    <div class="sval">Подсветка: авто</div>
+    <svg class="schev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  <div class="setrow">
+    <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="14" height="14"/><path d="M9 9h6v6H9z"/></svg>
+    <div class="sname">ПАМЯТЬ</div>
+    <div class="sval">182 / 400 МБ</div>
+    <svg class="schev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  <div class="setrow">
+    <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="16" height="10"/><path d="M21 10v4"/><path d="M5 9h9v6H5z"/></svg>
+    <div class="sname">ПИТАНИЕ</div>
+    <div class="sval">74 % · 34 °C</div>
+    <svg class="schev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+
+  <div class="info-label" style="left:24px;top:414px">ЗАПУСК</div>
+  <div class="bseg on" style="left:24px;top:430px">ОБОЛОЧКА</div>
+  <div class="bseg" style="left:248px;top:430px">БЕЗ X</div>
+  <div class="info-label" id="boot-hint" style="left:24px;top:490px">применится после перезагрузки</div>
+  <div class="sys" id="reboot" style="top:512px">ПЕРЕЗАГРУЗИТЬ</div>
+
+  <nav class="dock">
+    <a href="#" title="Музыка"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 17V8l8-2v9"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="15" r="2"/></svg></a>
+    <a href="#" title="Файлы"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h6l2 2h10v11H3z"/></svg></a>
+    <a href="#" title="Терминал"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14"/><path d="M7 10l3 2.5L7 15"/><path d="M12 15h5"/></svg></a>
+    <a href="#" title="Браузер"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M4 12h16"/><path d="M12 4c3 3 3 13 0 16"/><path d="M12 4c-3 3-3 13 0 16"/></svg></a>
+  </nav>
+  <script src="shell.js"></script>
+</body>
+</html>

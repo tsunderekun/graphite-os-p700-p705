@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>metro — apps</title>
+<link rel="stylesheet" href="metro.css">
+<style>
+  .alist { position: absolute; left: 0; right: 0; top: 88px; bottom: 0; overflow-y: auto; }
+  .approw { position: relative; height: 64px; border-top: 1px solid #22262b; padding: 0 20px; display: flex; align-items: center; gap: 16px; }
+  .approw:first-child { border-top: 0; }
+  .approw .ic { width: 26px; height: 26px; color: #f2f4f6; flex: 0 0 26px; }
+  .approw .nm { flex: 1; font-size: 16px; }
+  .approw .pin { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: #8e95a2; }
+  .approw .pin.on { color: #3fc8d0; }
+  .approw .pin.on .ic { color: #3fc8d0; }
+  .approw .pin:not(.on) .ic { display: none; }
+  .approw .pin:not(.on)::before { content: '+'; font-size: 22px; line-height: 1; color: #8e95a2; }
+  .approw .pin .ic { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+  <header class="status">
+    <span>14:35</span>
+    <span class="right"><svg class="ic" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg><span class="batt"><i></i></span><span>74%</span></span>
+  </header>
+
+  <header class="apphead withback">
+    <a class="back" href="m-home.html" aria-label="Назад">
+      <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6 L7 12 L15 18"/></svg>
+    </a>
+    <h1>Приложения</h1>
+    <div class="sub">ВСЕ</div>
+  </header>
+
+  <div class="alist">
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 17V8l8-2v9"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="15" r="2"/></svg>
+      <span class="nm">Музыка</span>
+      <div class="pin on" data-pin><svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h6l2 2h10v11H3z"/></svg>
+      <span class="nm">Файлы</span>
+      <div class="pin on" data-pin><svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14"/><path d="M7 10l3 2.5L7 15"/><path d="M12 15h5"/></svg>
+      <span class="nm">Терминал</span>
+      <div class="pin on" data-pin><svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M4 12h16"/><path d="M12 4c3 3 3 13 0 16"/><path d="M12 4c-3 3-3 13 0 16"/></svg>
+      <span class="nm">Браузер</span>
+      <div class="pin on" data-pin><svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h16"/><rect x="7" y="4" width="4" height="4"/><rect x="13" y="10" width="4" height="4"/><rect x="9" y="16" width="4" height="4"/></svg>
+      <span class="nm">Настройки</span>
+      <div class="pin on" data-pin><svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h8M9 16h8"/></svg>
+      <span class="nm">Заметки</span>
+      <div class="pin on" data-pin><svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="18" height="12"/><circle cx="12" cy="13" r="3"/><path d="M8 7l2-3h4l2 3"/></svg>
+      <span class="nm">Камера</span>
+      <div class="pin" data-pin><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg>
+      <span class="nm">Галерея</span>
+      <div class="pin" data-pin><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+      <span class="nm">Калькулятор</span>
+      <div class="pin" data-pin><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+    <div class="approw">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+      <span class="nm">Часы</span>
+      <div class="pin" data-pin><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l6 6-2.5 1.5L12 14l-1 4-2 2-1.5-1.5 2-2 4-1 3.5-3.5L18 9l-6-6z"/></svg></div>
+    </div>
+  </div>
+  <div class="path" style="left:20px;top:772px">＋ — на главный экран · ✓ — убрать</div>
+  <script src="metro.js"></script>
+</body>
+</html>

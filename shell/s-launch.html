@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480, initial-scale=1">
+<title>Настройки — Запуск</title>
+<link rel="stylesheet" href="metro.css">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body data-screen="launch">
+
+<header class="status">
+  <span class="time">14:35</span>
+  <span class="right">
+    <svg class="ic wifi" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="usb"><svg viewBox="0 0 12 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 1v14M6 3L3 6M6 3l3 3M6 11l-2-2M6 11l2-2"/></svg>USB</span>
+  </span>
+</header>
+
+<header class="shead">
+  <a class="back" href="s-root.html" data-back aria-label="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6L7 12l8 6"/></svg>
+  </a>
+  <div>
+    <h1>Запуск</h1>
+    <div class="sub">ПОСЛЕ ПЕРЕЗАГРУЗКИ</div>
+  </div>
+</header>
+
+<main class="sbody">
+  <div class="grp">РЕЖИМ</div>
+
+  <div class="seg">
+    <button type="button" class="on" data-boot="shell">ОБОЛОЧКА</button>
+    <button type="button" data-boot="nox">БЕЗ X</button>
+  </div>
+  <div class="warnbox">
+    <div class="h">! применится после перезагрузки</div>
+    <p>Режим пишется в /etc/lgtest-mode. Текущая сессия не меняется, тема и звук — сразу.</p>
+  </div>
+
+  <div class="kv"><span class="k">ТЕКУЩИЙ</span><span class="v"><span data-mode-name>Оболочка</span> · <span data-mode-code>shell</span></span></div>
+
+  <div class="grp">ПОВЕДЕНИЕ</div>
+
+  <div class="r">
+    <span class="tx"><span class="nm">Watchdog</span><span class="sub">рестарт ≤3, затем fb-плеер</span></span>
+    <span class="sw on" role="switch" aria-checked="true" aria-label="Watchdog"><i></i></span>
+  </div>
+
+  <div class="r">
+    <span class="tx"><span class="nm">MPD при загрузке</span><span class="sub">mpd.start читает ключ</span></span>
+    <span class="sw on" role="switch" aria-checked="true" aria-label="MPD при загрузке"><i></i></span>
+  </div>
+
+  <div class="kv"><span class="k">ЕСЛИ X УПАЛ</span><span class="v">через 20 с плеер · выбор не меняется</span></div>
+  <div class="kv"><span class="k">X-СЕРВЕР</span><span class="v">X :0 · 16 bpp · Rotate UD</span></div>
+  <div class="kv"><span class="k">СЕССИЯ</span><span class="v">session-shell · X + fbpan-ng</span></div>
+  <div class="kv"><span class="k">ДЕСКТОП</span><span class="v muted">openbox · только отладка</span></div>
+  <div class="kv"><span class="k">ФАЙЛ</span><span class="v">/etc/lgtest-mode</span></div>
+
+  <button class="btn pri" type="button">ПЕРЕЗАГРУЗИТЬ</button>
+  <button class="btn" type="button">ВЫКЛЮЧИТЬ…</button>
+
+  <footer class="foot compact">
+    <span>ЗАПУСК · /etc/lgtest-mode</span>
+    <span class="rgt">shell / no-X</span>
+  </footer>
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>

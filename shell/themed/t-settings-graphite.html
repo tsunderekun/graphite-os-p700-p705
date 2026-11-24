@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>metro — player settings</title>
+<link rel="stylesheet" href="metro-graphite.css">
+</head>
+<body>
+  <header class="status">
+    <span>14:35</span>
+    <span class="right"><svg class="ic" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg><span class="batt"><i></i></span><span>74%</span></span>
+  </header>
+
+  <header class="apphead withback">
+    <a class="back" href="m-info.html" aria-label="Назад">
+      <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6 L7 12 L15 18"/></svg>
+    </a>
+    <h1>Настройки</h1>
+    <div class="sub">Плеер</div>
+  </header>
+
+  <div class="sect">ТЕМА</div>
+  <div class="srow" style="padding-left:52px">
+    <div style="position:absolute;left:20px;top:22px;width:20px;height:20px;background:#3acad6"></div>
+    <div class="n" style="left:52px">Графит</div><div class="v" style="left:52px">основная</div>
+  </div>
+  <div class="srow" style="padding-left:52px">
+    <div style="position:absolute;left:20px;top:22px;width:20px;height:20px;background:#e0a052"></div>
+    <div class="n" style="left:52px">Янтарь</div><div class="v" style="left:52px">тёплая</div>
+  </div>
+  <div class="srow" style="padding-left:52px">
+    <div style="position:absolute;left:20px;top:22px;width:20px;height:20px;background:#6aa8e0"></div>
+    <div class="n" style="left:52px">Лёд</div><div class="v" style="left:52px">холодная</div>
+  </div>
+
+  <div class="sect">ПОДСВЕТКА КЛАВИШ</div>
+  <div class="srow"><div class="n">Авто</div><div class="v">гаснет через 5 секунд</div><div class="ch">●</div></div>
+  <div class="srow"><div class="n">Всегда</div><div class="v">пока экран включён</div><div class="ch">○</div></div>
+  <div class="srow"><div class="n">Выключена</div><div class="v">не подсвечивать</div><div class="ch">○</div></div>
+
+  <div class="sect">ЗАПУСК</div>
+  <div class="swrow" data-sw>
+    <div class="n">Без X (плеер)</div>
+    <div class="v">аварийный режим · применится после перезагрузки</div>
+    <div class="sw"><i></i></div>
+  </div>
+  <div class="srow"><div class="textbtn">Перезагрузить</div></div>
+
+  <div class="sect">СИСТЕМА</div>
+  <div class="srow" data-go="m-lock.html"><div class="n">Заблокировать</div><div class="ch">›</div></div>
+  <div class="srow" data-go="m-power.html"><div class="n" style="color:#3acad6">Выключить</div><div class="ch">›</div></div>
+  <script src="../metro.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480, initial-scale=1">
+<title>Настройки — Хранилище</title>
+<link rel="stylesheet" href="metro.css">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body data-screen="storage">
+
+<header class="status">
+  <span class="time">14:35</span>
+  <span class="right">
+    <svg class="ic wifi" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="usb"><svg viewBox="0 0 12 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 1v14M6 3L3 6M6 3l3 3M6 11l-2-2M6 11l2-2"/></svg>USB</span>
+  </span>
+</header>
+
+<header class="shead">
+  <a class="back" href="s-root.html" data-back aria-label="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6L7 12l8 6"/></svg>
+  </a>
+  <div>
+    <h1>Хранилище</h1>
+    <div class="sub">ROOT + SD</div>
+  </div>
+</header>
+
+<main class="sbody">
+  <div class="grp">НАКОПИТЕЛИ</div>
+
+  <div class="disk">
+    <div class="top"><b>Система</b><span>2,7 ГБ</span></div>
+    <div class="meter"><i style="width:59%"></i></div>
+    <div class="meta">занято 1,6 · свободно <b>1,1 ГБ</b></div>
+  </div>
+
+  <div class="disk">
+    <div class="top"><b>SD · <sd-uuid></b><span>29,4 ГБ</span></div>
+    <div class="meter"><i style="width:26%"></i></div>
+    <div class="meta">музыка 1,8 · прочее 5,9 · свободно <b>21,7 ГБ</b></div>
+  </div>
+
+  <div class="r">
+    <span class="tx"><span class="nm">Извлечь карту</span><span class="sub">umount /media/sd · MPD остановится</span></span>
+    <span class="ch"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></span>
+  </div>
+
+  <div class="grp">КЭШ</div>
+
+  <div class="r mini">
+    <span class="tx"><span class="nm">Кэш обложек</span><span class="sub">readpicture · 214 обложек</span></span>
+    <span class="val">30 МБ</span>
+  </div>
+  <div class="r mini">
+    <span class="tx"><span class="nm">Индекс библиотеки</span><span class="sub">MPD update · 126 треков</span></span>
+    <span class="val">2,1 МБ</span>
+  </div>
+
+  <button class="btn pri" type="button">ОЧИСТИТЬ КЭШ · 32 МБ</button>
+
+  <div class="grp">СЕРВИС</div>
+
+  <div class="kv"><span class="k">МУЗЫКА</span><span class="v">126 треков · 1,8 ГБ</span></div>
+  <div class="kv"><span class="k">SWAP</span><span class="v">256 МБ на eMMC · 0 %</span></div>
+
+  <div class="r">
+    <span class="tx"><span class="nm">Открыть Файлы</span><span class="sub">/home/user · pcmanfm</span></span>
+    <span class="ch"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></span>
+  </div>
+
+  <div class="r dis">
+    <span class="tx"><span class="nm">Форматировать SD…</span><span class="sub">P2 · удержание 3 с · vfat</span></span>
+    <span class="val">P2</span>
+  </div>
+
+  <footer class="foot compact">
+    <span>ХРАНИЛИЩЕ · df /</span>
+    <span class="rgt">eMMC + SD</span>
+  </footer>
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>

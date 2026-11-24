@@ -1,0 +1,203 @@
+{
+  "package": "@phosphor-icons/core",
+  "version": "2.1.1",
+  "weight": "regular",
+  "license": "MIT",
+  "icon": [
+    {
+      "ours": "music",
+      "phosphor": "music-notes",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/music-notes.svg"
+    },
+    {
+      "ours": "folder",
+      "phosphor": "folder",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/folder.svg"
+    },
+    {
+      "ours": "terminal",
+      "phosphor": "terminal-window",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/terminal-window.svg"
+    },
+    {
+      "ours": "globe",
+      "phosphor": "globe",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/globe.svg"
+    },
+    {
+      "ours": "sliders",
+      "phosphor": "sliders",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/sliders.svg"
+    },
+    {
+      "ours": "note",
+      "phosphor": "file-text",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/file-text.svg"
+    },
+    {
+      "ours": "grid",
+      "phosphor": "squares-four",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/squares-four.svg"
+    },
+    {
+      "ours": "wifi",
+      "phosphor": "wifi-high",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/wifi-high.svg"
+    },
+    {
+      "ours": "lock",
+      "phosphor": "lock",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/lock.svg"
+    },
+    {
+      "ours": "power",
+      "phosphor": "power",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/power.svg"
+    },
+    {
+      "ours": "battery",
+      "phosphor": "battery-high",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/battery-high.svg"
+    },
+    {
+      "ours": "sd",
+      "phosphor": "sim-card",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/sim-card.svg"
+    },
+    {
+      "ours": "play",
+      "phosphor": "play",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/play.svg"
+    },
+    {
+      "ours": "pause",
+      "phosphor": "pause",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/pause.svg"
+    },
+    {
+      "ours": "next",
+      "phosphor": "skip-forward",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/skip-forward.svg"
+    },
+    {
+      "ours": "prev",
+      "phosphor": "skip-back",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/skip-back.svg"
+    },
+    {
+      "ours": "shuffle",
+      "phosphor": "shuffle",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/shuffle.svg"
+    },
+    {
+      "ours": "repeat",
+      "phosphor": "repeat",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/repeat.svg"
+    },
+    {
+      "ours": "search",
+      "phosphor": "magnifying-glass",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/magnifying-glass.svg"
+    },
+    {
+      "ours": "plus",
+      "phosphor": "plus",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/plus.svg"
+    },
+    {
+      "ours": "check",
+      "phosphor": "check",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/check.svg"
+    },
+    {
+      "ours": "close",
+      "phosphor": "x",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/x.svg"
+    },
+    {
+      "ours": "sun",
+      "phosphor": "sun",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/sun.svg"
+    },
+    {
+      "ours": "volume",
+      "phosphor": "speaker-high",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/speaker-high.svg"
+    },
+    {
+      "ours": "keyboard",
+      "phosphor": "keyboard",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/keyboard.svg"
+    },
+    {
+      "ours": "bluetooth",
+      "phosphor": "bluetooth",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/bluetooth.svg"
+    },
+    {
+      "ours": "sim",
+      "phosphor": "sim-card",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/sim-card.svg"
+    },
+    {
+      "ours": "info",
+      "phosphor": "info",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/info.svg"
+    },
+    {
+      "ours": "back",
+      "phosphor": "arrow-left",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/arrow-left.svg"
+    },
+    {
+      "ours": "chevron",
+      "phosphor": "caret-right",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/caret-right.svg"
+    },
+    {
+      "ours": "usb",
+      "phosphor": "usb",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/usb.svg"
+    },
+    {
+      "ours": "clock",
+      "phosphor": "clock",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/clock.svg"
+    },
+    {
+      "ours": "airplane",
+      "phosphor": "airplane",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/airplane.svg"
+    },
+    {
+      "ours": "storage",
+      "phosphor": "hard-drives",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/hard-drives.svg"
+    },
+    {
+      "ours": "shield",
+      "phosphor": "shield",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/shield.svg"
+    },
+    {
+      "ours": "lab",
+      "phosphor": "flask",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/flask.svg"
+    },
+    {
+      "ours": "trash",
+      "phosphor": "trash",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/trash.svg"
+    },
+    {
+      "ours": "restart",
+      "phosphor": "arrow-clockwise",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/arrow-clockwise.svg"
+    },
+    {
+      "ours": "headphones",
+      "phosphor": "headphones",
+      "url": "https://unpkg.com/@phosphor-icons/core@2.1.1/assets/regular/headphones.svg"
+    }
+  ]
+}

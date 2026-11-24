@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480, initial-scale=1">
+<title>Настройки — Клавиши</title>
+<link rel="stylesheet" href="metro.css">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body data-screen="keys">
+
+<header class="status">
+  <span class="time">14:35</span>
+  <span class="right">
+    <svg class="ic wifi" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="usb"><svg viewBox="0 0 12 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 1v14M6 3L3 6M6 3l3 3M6 11l-2-2M6 11l2-2"/></svg>USB</span>
+  </span>
+</header>
+
+<header class="shead">
+  <a class="back" href="s-root.html" data-back aria-label="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6L7 12l8 6"/></svg>
+  </a>
+  <div>
+    <h1>Клавиши</h1>
+    <div class="sub">VOL · POWER · HOME</div>
+  </div>
+</header>
+
+<main class="sbody">
+  <div class="grp">ПОДСВЕТКА</div>
+  <div class="seg" data-seg="btnlight">
+    <button type="button" class="on">АВТО</button>
+    <button type="button">ВКЛ</button>
+    <button type="button">ВЫКЛ</button>
+  </div>
+  <div class="snote">АВТО — 5 с после ввода, в локе всегда 0</div>
+
+  <div class="grp">ЖЕЛЕЗО</div>
+
+  <div class="kv"><span class="k">VOL± КОРОТКО</span><span class="v">громкость ±5 %</span></div>
+  <div class="kv"><span class="k">VOL± 0,7 С</span><span class="v">следующий · предыдущий трек</span></div>
+  <div class="kv"><span class="k">POWER КОРОТКО</span><span class="v">лок · подсветка 0</span></div>
+  <div class="kv"><span class="k">POWER 1,5 С</span><span class="v">диалог выключения</span></div>
+  <div class="kv"><span class="k">HOME</span><span class="v">Пуск · из любого приложения</span></div>
+  <div class="kv"><span class="k">ГАРНИТУРА</span><span class="v">плей/пауза · KEY_MEDIA</span></div>
+  <div class="kv"><span class="k">МЕНЮ</span><span class="v">на корпусе нет</span></div>
+  <div class="kv"><span class="k">BACK</span><span class="v">только в шапке экрана</span></div>
+  <div class="kv"><span class="k">TOUCH</span><span class="v">event0 · резистивный</span></div>
+  <div class="kv"><span class="k">KEY_END</span><span class="v">event5 · не используется</span></div>
+
+  <div class="grp">СОСТОЯНИЕ</div>
+
+  <div class="kv"><span class="k">ДРАЙВЕР</span><span class="v">event1 · event5 · event4 — живы</span></div>
+
+  <footer class="foot compact">
+    <span>КЛАВИШИ · 3 + HOME</span>
+    <span class="rgt">evdev напрямую</span>
+  </footer>
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>

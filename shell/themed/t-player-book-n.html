@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>metro — player</title>
+<link rel="stylesheet" href="metro-book-n.css">
+</head>
+<body>
+  <header class="status">
+    <span>14:35</span>
+    <span class="right">
+      <svg class="ic" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg>
+      <span class="batt"><i></i></span><span>74%</span>
+    </span>
+  </header>
+
+  <div class="pivot">
+    <h1>Сейчас</h1>
+    <div class="others">
+      <a href="m-queue.html">ОЧЕРЕДЬ</a>
+      <a href="m-info.html">ИНФО</a>
+    </div>
+  </div>
+
+  <div class="art">
+    <svg class="ic" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M50 82V34l38-8v46"/><ellipse cx="41" cy="82" rx="9" ry="8"/><ellipse cx="79" cy="74" rx="9" ry="8"/>
+    </svg>
+    <div class="nocover">НЕТ ОБЛОЖКИ</div>
+  </div>
+
+  <div class="ptitle">Звезда по имени Солнце</div>
+  <div class="psub">Кино · Группа крови</div>
+
+  <div class="edge left" id="shuffle">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h4l10 10h4"/><path d="M3 17h4l10-10h4"/><path d="M18 4l3 3-3 3"/><path d="M18 14l3 3-3 3"/></svg>
+  </div>
+  <div class="edge right" id="repeat">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 8h13"/><path d="M15 5l3 3-3 3"/><path d="M19 16H6"/><path d="M9 13l-3 3 3 3"/></svg>
+  </div>
+  <div class="vol">VOL 60%</div>
+
+  <div class="prog"><i></i></div>
+  <div class="knob"></div>
+  <div class="times"><span>1:12</span><span>3:48</span></div>
+
+  <div class="trans">
+    <button class="tr side" aria-label="Предыдущий">
+      <svg class="ic" viewBox="0 0 38 38" fill="currentColor"><rect x="6" y="8" width="4" height="22"/><path d="M14 19 L30 8 V30 Z"/></svg>
+    </button>
+    <button class="tr play" id="play" aria-label="Пауза">
+      <svg class="ic" viewBox="0 0 38 38" fill="currentColor"><path d="M12 7 L31 19 L12 31 Z"/></svg>
+    </button>
+    <button class="tr side" aria-label="Следующий">
+      <svg class="ic" viewBox="0 0 38 38" fill="currentColor"><path d="M24 19 L8 8 V30 Z"/><rect x="28" y="8" width="4" height="22"/></svg>
+    </button>
+  </div>
+  <script src="../metro.js"></script>
+</body>
+</html>

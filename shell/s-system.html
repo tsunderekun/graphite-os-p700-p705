@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480, initial-scale=1">
+<title>Настройки — Время и дата</title>
+<link rel="stylesheet" href="metro.css">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body data-screen="system">
+
+<header class="status">
+  <span class="time">14:35</span>
+  <span class="right">
+    <svg class="ic wifi" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="usb"><svg viewBox="0 0 12 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 1v14M6 3L3 6M6 3l3 3M6 11l-2-2M6 11l2-2"/></svg>USB</span>
+  </span>
+</header>
+
+<header class="shead">
+  <a class="back" href="s-about.html" data-back aria-label="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6L7 12l8 6"/></svg>
+  </a>
+  <div>
+    <h1>Время и дата</h1>
+    <div class="sub">СИСТЕМА · <span data-theme-code>GRAPHITE</span></div>
+  </div>
+</header>
+
+<main class="sbody">
+  <div class="card">
+    <div class="clock2">14:35</div>
+    <div class="cap">ПН, 24 НОЯ 2026 · EUROPE/MOSCOW</div>
+  </div>
+
+  <div class="grp">СИНХРОНИЗАЦИЯ</div>
+
+  <div class="kv"><span class="k">ЧАСОВОЙ ПОЯС</span><span class="v">Europe/Moscow · UTC+3</span></div>
+  <div class="kv"><span class="k">NTP</span><span class="v muted">time.start · не подтверждён</span></div>
+  <div class="kv"><span class="k">ПОСЛЕДНЯЯ</span><span class="v">5 мин назад · auto</span></div>
+  <div class="kv"><span class="k">ИСТОЧНИК</span><span class="v">RTC + time.start</span></div>
+
+  <button class="btn pri" type="button">СИНХРОНИЗИРОВАТЬ</button>
+
+  <div class="grp">ЯЗЫК</div>
+
+  <div class="kv"><span class="k">ИНТЕРФЕЙС</span><span class="v muted">только русский · строки вкомпилированы</span></div>
+  <div class="kv"><span class="k">РАСКЛАДКА</span><span class="v">ЙЦУКЕН · ENG</span></div>
+
+  <div class="snote">смена языка — пересборка шелла, не настройка</div>
+
+  <div class="grp">ДАТА</div>
+
+  <div class="kv"><span class="k">СЕГОДНЯ</span><span class="v">Пн, 24 ноября 2026</span></div>
+  <div class="kv"><span class="k">ФОРМАТ</span><span class="v">24 ч · DD.MM.YYYY</span></div>
+  <div class="kv"><span class="k">RTC</span><span class="v">/dev/rtc0 · есть</span></div>
+  <div class="kv"><span class="k">ПРИ ЗАГРУЗКЕ</span><span class="v">RTC, затем time.start</span></div>
+
+  <footer class="foot compact">
+    <span>СИСТЕМА · RTC /dev/rtc0</span>
+    <span class="rgt">MSK · UTC+3</span>
+  </footer>
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>

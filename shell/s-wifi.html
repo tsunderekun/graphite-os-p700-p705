@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480, initial-scale=1">
+<title>Настройки — Сеть</title>
+<link rel="stylesheet" href="metro.css">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body data-screen="wifi">
+
+<header class="status">
+  <span class="time">14:35</span>
+  <span class="right">
+    <svg class="ic wifi" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="usb"><svg viewBox="0 0 12 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 1v14M6 3L3 6M6 3l3 3M6 11l-2-2M6 11l2-2"/></svg>USB</span>
+  </span>
+</header>
+
+<header class="shead">
+  <a class="back" href="s-root.html" data-back aria-label="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6L7 12l8 6"/></svg>
+  </a>
+  <div>
+    <h1>Сеть</h1>
+    <div class="sub">WI-FI · <span data-theme-code>GRAPHITE</span></div>
+  </div>
+</header>
+
+<main class="sbody">
+  <div class="r">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.4" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="tx"><span class="nm">Wi-Fi</span><span class="sub">Home-Wi-Fi · −58 dBm</span></span>
+    <span class="sw on" role="switch" aria-checked="true" aria-label="Wi-Fi"><i></i></span>
+  </div>
+
+  <div class="kv"><span class="k">СЕТЬ</span><span class="v">Home-Wi-Fi</span></div>
+  <div class="kv"><span class="k">IP И ШЛЮЗ</span><span class="v"><phone-ip> · <gateway-ip></span></div>
+  <div class="kv"><span class="k">MAC</span><span class="v"><mac></span></div>
+
+  <div class="r">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="10" width="18" height="8"/><path d="M7 10V7h7l3 3"/><path d="M7 14h.1M11 14h.1"/></svg>
+    <span class="tx"><span class="nm">USB-сеть (RNDIS)</span><span class="sub">172.16.42.1 · SSH с ПК</span></span>
+    <span class="sw on" role="switch" aria-checked="true" aria-label="USB-сеть"><i></i></span>
+  </div>
+
+  <div class="grp">СЕТИ<span class="n">P2</span></div>
+
+  <div class="r cur">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.4" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="tx"><span class="nm">Home-Wi-Fi</span><span class="sub">WPA2 · подключено</span></span>
+    <span class="val on">✓</span>
+  </div>
+
+  <div class="r">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.4" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="tx"><span class="nm">MTS_Home</span><span class="sub">WPA2 · −64 dBm</span></span>
+    <svg class="ch" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="7" width="10" height="7"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+  </div>
+
+  <div class="r">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.4" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="tx"><span class="nm">FREE_WIFI</span><span class="sub">открытая · −71 dBm</span></span>
+    <span class="val">!</span>
+  </div>
+
+  <div class="r">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    <span class="tx"><span class="nm">Скрытая сеть…</span><span class="sub">ввести SSID вручную</span></span>
+    <span class="val">добавить</span>
+  </div>
+
+  <div class="grp">НЕДОСТУПНО</div>
+
+  <div class="kv"><span class="k">МОБИЛЬНАЯ · SIM</span><span class="v muted">SIM busy · нет сервера EFS</span></div>
+  <div class="kv"><span class="k">BLUETOOTH</span><span class="v muted">HCI молчит</span></div>
+  <div class="kv"><span class="k">GPS</span><span class="v muted">NMEA не идёт</span></div>
+  <div class="kv"><span class="k">ТОЧКА ДОСТУПА</span><span class="v muted">AP не проверен</span></div>
+
+  <footer class="foot compact">
+    <span>СЕТЬ · WLAN0</span>
+    <span class="rgt">Home-Wi-Fi · 72 Мбит/с</span>
+  </footer>
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>

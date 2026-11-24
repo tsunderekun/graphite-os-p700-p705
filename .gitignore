@@ -1,0 +1,39 @@
+# secrets and local device config
+.env
+*.local
+wpa_supplicant*.conf
+*.pem
+*.key
+id_rsa*
+
+# build output
+os/build/
+*.o
+*.a
+
+# generated artifacts and captures
+artifacts/
+downloads/
+backup/
+__pycache__/
+*.pyc
+*.xwd
+*.log
+*.out
+
+# firmware images and packages
+*.kdz
+*.img
+*.raw
+*.bin
+*.apk
+*.zip
+*.7z
+*.exe
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.playwright-mcp/
+.venv/
+node_modules/

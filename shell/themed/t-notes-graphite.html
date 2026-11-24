@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>metro — notes</title>
+<link rel="stylesheet" href="metro-graphite.css">
+<style>
+  .kb .krow { height: 60px; }
+</style>
+</head>
+<body>
+  <header class="status">
+    <span>14:35</span>
+    <span class="right"><svg class="ic" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg><span class="batt"><i></i></span><span>74%</span></span>
+  </header>
+
+  <header class="apphead withback">
+    <a class="back" href="m-home.html" aria-label="Назад">
+      <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6 L7 12 L15 18"/></svg>
+    </a>
+    <h1>Заметки</h1>
+    <div class="sub">СПИСОК.TXT</div>
+  </header>
+
+  <div class="notearea2">
+    <h1>План сборки системы</h1>
+    <div>1. Собрать ядро 3.4 с драйвером fbdev для msm7227a<br>
+    2. Отключить лишние службы для экономии памяти<br>
+    3. Настроить запуск графитовой оболочки через xinit<br>
+    4. Проверить раскладку ввода в терминале <span style="display:inline-block;width:2px;height:16px;background:#3acad6;vertical-align:-2px"></span></div>
+  </div>
+
+  <div class="kb">
+    <div class="krow">
+      <div class="key">й</div><div class="key">ц</div><div class="key">у</div><div class="key">к</div><div class="key">е</div><div class="key">н</div>
+      <div class="key">г</div><div class="key">ш</div><div class="key">щ</div><div class="key">з</div><div class="key">х</div>
+    </div>
+    <div class="krow">
+      <div class="key">ф</div><div class="key">ы</div><div class="key">в</div><div class="key">а</div><div class="key">п</div><div class="key">р</div>
+      <div class="key">о</div><div class="key">л</div><div class="key">д</div><div class="key">ж</div><div class="key">э</div>
+    </div>
+    <div class="krow">
+      <div class="key fn" style="flex:1.4">SHIFT</div>
+      <div class="key">я</div><div class="key">ч</div><div class="key">с</div><div class="key">м</div><div class="key">и</div>
+      <div class="key">т</div><div class="key">ь</div><div class="key">б</div><div class="key">ю</div><div class="key">ъ</div>
+    </div>
+    <div class="krow">
+      <div class="key fn" style="flex:1.2">123</div>
+      <div class="key fn">ENG</div>
+      <div class="key" style="flex:4">ПРОБЕЛ</div>
+      <div class="key fn">DEL</div>
+      <div class="key enter">ВВОД</div>
+    </div>
+  </div>
+  <script src="../metro.js"></script>
+</body>
+</html>

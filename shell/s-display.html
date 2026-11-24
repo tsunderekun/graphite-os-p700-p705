@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480, initial-scale=1">
+<title>Настройки — Экран и вид</title>
+<link rel="stylesheet" href="metro.css">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body data-screen="display">
+
+<header class="status">
+  <span class="time">14:35</span>
+  <span class="right">
+    <svg class="ic wifi" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="usb"><svg viewBox="0 0 12 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 1v14M6 3L3 6M6 3l3 3M6 11l-2-2M6 11l2-2"/></svg>USB</span>
+  </span>
+</header>
+
+<header class="shead">
+  <a class="back" href="s-root.html" data-back aria-label="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6L7 12l8 6"/></svg>
+  </a>
+  <div>
+    <h1>Экран и вид</h1>
+    <div class="sub">ТЕМА · СВЕТ</div>
+  </div>
+</header>
+
+<main class="sbody">
+  <div class="prev" aria-label="Превью темы">
+    <div class="pv-bg"><span class="pv-l">ФОН</span><span class="pv-aa">Aa 15</span></div>
+    <div class="pv-sf"><span class="pv-l">SURF</span><span class="pv-aa">Aa 12</span></div>
+    <div class="pv-ac"><span class="pv-l">ACCENT</span><span class="pv-aa">Aa 15</span></div>
+  </div>
+
+  <div class="grp">ТЕМА</div>
+
+  <div class="trow" data-set-theme="graphite" role="button" tabindex="0">
+    <span class="sw2" data-theme-swatch="graphite"><i></i><b></b></span>
+    <span class="nm">Графит</span><span class="fam">ТЁМНАЯ</span><span class="mk">✓</span>
+  </div>
+  <div class="trow" data-set-theme="ember" role="button" tabindex="0">
+    <span class="sw2" data-theme-swatch="ember"><i></i><b></b></span>
+    <span class="nm">Уголь</span><span class="fam">ТЁМНАЯ</span><span class="mk">✓</span>
+  </div>
+  <div class="trow" data-set-theme="slate" role="button" tabindex="0">
+    <span class="sw2" data-theme-swatch="slate"><i></i><b></b></span>
+    <span class="nm">Сланец</span><span class="fam">ТЁМНАЯ</span><span class="mk">✓</span>
+  </div>
+  <div class="trow" data-set-theme="book" role="button" tabindex="0">
+    <span class="sw2" data-theme-swatch="book"><i></i><b></b></span>
+    <span class="nm">Книга</span><span class="fam">СЕРАЯ</span><span class="mk">✓</span>
+  </div>
+  <div class="trow" data-set-theme="book-n" role="button" tabindex="0">
+    <span class="sw2" data-theme-swatch="book-n"><i></i><b></b></span>
+    <span class="nm">Книга · нейтр.</span><span class="fam">СЕРАЯ</span><span class="mk">✓</span>
+  </div>
+  <div class="trow" data-set-theme="paper" role="button" tabindex="0">
+    <span class="sw2" data-theme-swatch="paper"><i></i><b></b></span>
+    <span class="nm">Бумага</span><span class="fam">СВЕТЛАЯ</span><span class="mk">✓</span>
+  </div>
+  <div class="trow" data-set-theme="paper-n" role="button" tabindex="0">
+    <span class="sw2" data-theme-swatch="paper-n"><i></i><b></b></span>
+    <span class="nm">Бумага · нейтр.</span><span class="fam">СВЕТЛАЯ</span><span class="mk">✓</span>
+  </div>
+
+  <div class="grp">АКЦЕНТ</div>
+  <div class="accs">
+    <div class="acc" data-set-accent="turquoise" role="button" tabindex="0"><span class="dot"></span><span class="lb">Бирюза</span></div>
+    <div class="acc" data-set-accent="amber" role="button" tabindex="0"><span class="dot"></span><span class="lb">Янтарь</span></div>
+    <div class="acc" data-set-accent="blue" role="button" tabindex="0"><span class="dot"></span><span class="lb">Синий</span></div>
+    <div class="acc" data-set-accent="green" role="button" tabindex="0"><span class="dot"></span><span class="lb">Зелёный</span></div>
+  </div>
+
+  <div class="grp">ТЕКСТУРА</div>
+  <div class="r mini texrow" data-tex-toggle role="switch" aria-checked="true">
+    <span class="tx">
+      <span class="nm">Текстура фона</span>
+      <span class="sub" data-tex-sub>шероховатость · авто</span>
+    </span>
+    <span class="sw on"><i></i></span>
+  </div>
+  <div class="snote" data-tex-note>АВТО: зерно на бумаге и книге; на тёмных зерна нет, только верже</div>
+
+  <div class="sld" data-pct="70">
+    <span class="lab">ЯРКОСТЬ</span><span class="val">70 %</span>
+    <div class="bar"><i></i></div><div class="knob"></div>
+  </div>
+
+  <div class="r">
+    <span class="tx"><span class="nm">Гаснет через</span><span class="sub">без ввода · MPD на паузе</span></span>
+    <span class="val">30 с</span>
+    <span class="ch"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></span>
+  </div>
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>

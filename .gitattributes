@@ -1,0 +1,6 @@
+# The project targets Alpine Linux; keep every shell script LF even on
+# Windows checkouts.
+* text=auto eol=lf
+*.png binary
+*.ttf binary
+*.inc binary

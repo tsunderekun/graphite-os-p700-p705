@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>graphite shell — player settings</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="sbar">
+    <button class="sbtn left" aria-label="Назад">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M15 6 L7 12 L15 18"/>
+      </svg>
+    </button>
+    <div class="stitle">НАСТРОЙКИ</div>
+  </header>
+
+  <div class="info-label" style="left:24px;top:92px">ТЕМА</div>
+
+  <div class="set-row sel" style="top:110px">
+    <div class="set-sw" style="background:#3fc8d0"></div>
+    <div class="set-name">ГРАФИТ</div>
+    <div class="set-mark on"></div>
+  </div>
+  <div class="set-row" style="top:166px">
+    <div class="set-sw" style="background:#e0a052"></div>
+    <div class="set-name">ЯНТАРЬ</div>
+    <div class="set-mark"></div>
+  </div>
+  <div class="set-row" style="top:222px">
+    <div class="set-sw" style="background:#6aa8e0"></div>
+    <div class="set-name">ЛЁД</div>
+    <div class="set-mark"></div>
+  </div>
+
+  <div class="info-line" style="top:292px"></div>
+  <div class="info-label" style="left:24px;top:314px">ПОДСВЕТКА КЛАВИШ</div>
+  <div class="seg on" style="left:24px">АВТО</div>
+  <div class="seg" style="left:172px">ВКЛ</div>
+  <div class="seg" style="left:320px">ВЫКЛ</div>
+
+  <div class="info-line" style="top:404px"></div>
+  <div class="info-label" style="left:24px;top:426px">СИСТЕМА</div>
+  <div class="sys" style="top:446px">ЗАБЛОКИРОВАТЬ</div>
+  <div class="sys" style="top:510px;color:#3fc8d0">ВЫКЛЮЧИТЬ</div>
+
+  <div class="info-label" style="left:24px;top:590px">ЗАПУСК</div>
+  <div class="bseg on" style="left:24px;top:606px">ОБОЛОЧКА</div>
+  <div class="bseg" style="left:248px;top:606px">ПЛЕЕР</div>
+  <div class="info-label" id="boot-hint" style="left:24px;top:666px">применится после перезагрузки</div>
+
+  <div class="info-label" style="left:0;right:0;top:752px;text-align:center">lp7player · ГРАФИТ</div>
+  <script src="shell.js"></script>
+</body>
+</html>

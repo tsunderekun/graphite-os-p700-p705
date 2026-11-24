@@ -1,0 +1,11 @@
+#!/bin/sh
+# Pick the session according to /etc/lgtest-mode.
+# shell   -> X + graphite-shell (falls back to player inside session-shell)
+# desktop -> openbox/tint2 for debugging
+# player  -> fb player, no X (default fallback)
+M=$(cat /etc/lgtest-mode 2>/dev/null || echo shell)
+case "$M" in
+    desktop) exec /usr/local/bin/session-desktop ;;
+    shell)   exec /usr/local/bin/session-shell ;;
+    *)       exec /usr/local/bin/session-player ;;
+esac

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480, initial-scale=1">
+<title>Настройки — Звук</title>
+<link rel="stylesheet" href="metro.css">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body data-screen="sound">
+
+<header class="status">
+  <span class="time">14:35</span>
+  <span class="right">
+    <svg class="ic wifi" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6c5.5-5 14.5-5 20 0"/><path d="M5 9.5c4-3.5 10-3.5 14 0"/><path d="M8 13c2.5-2 5.5-2 8 0"/><circle cx="12" cy="16.2" r="1.2" fill="currentColor" stroke="none"/></svg>
+    <span class="usb"><svg viewBox="0 0 12 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 1v14M6 3L3 6M6 3l3 3M6 11l-2-2M6 11l2-2"/></svg>USB</span>
+  </span>
+</header>
+
+<header class="shead">
+  <a class="back" href="s-root.html" data-back aria-label="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6L7 12l8 6"/></svg>
+  </a>
+  <div>
+    <h1>Звук</h1>
+    <div class="sub">MPD · НАУШНИКИ</div>
+  </div>
+</header>
+
+<main class="sbody">
+  <div class="grp">ГРОМКОСТЬ</div>
+  <div class="sld" data-pct="40" data-db="-24">
+    <span class="lab">МЕДИА</span><span class="val">−24 дБ · 12/30</span>
+    <div class="bar"><i></i></div><div class="knob"></div>
+  </div>
+  <div class="snote">0…30 шагов · −40…0 дБ · шаг 2 дБ</div>
+
+  <div class="kv"><span class="k">ВЫХОД</span><span class="v">наушники (с микрофоном) · lgjack</span></div>
+
+  <div class="grp">ПОВЕДЕНИЕ</div>
+
+  <div class="r">
+    <span class="tx"><span class="nm">Предупреждать выше −16 дБ</span><span class="sub">плашка «Громко!» 3 с · раз за загрузку</span></span>
+    <span class="sw on" role="switch" aria-checked="true" aria-label="Предупреждать выше −16 дБ"><i></i></span>
+  </div>
+
+  <div class="r">
+    <span class="tx"><span class="nm">Пауза при извлечении</span><span class="sub">h2w/state → 0 · MPD pause</span></span>
+    <span class="sw on" role="switch" aria-checked="true" aria-label="Пауза при извлечении"><i></i></span>
+  </div>
+
+  <div class="kv"><span class="k">MPD</span><span class="v">0.24.20 · idle 4 мс · буфер 54 мс</span></div>
+
+  <div class="grp">ТАЙМЕР СНА</div>
+  <div class="seg w4" data-seg="sleep">
+    <button type="button" class="on">ВЫКЛ</button>
+    <button type="button">15</button>
+    <button type="button">30</button>
+    <button type="button">60</button>
+  </div>
+
+  <button class="btn" type="button">ПРОВЕРИТЬ КАНАЛЫ</button>
+  <div class="snote">тон 1 кГц · −20 dBFS · 3 с · наушники на столе</div>
+
+  <div class="grp">НЕДОСТУПНО</div>
+
+  <div class="kv"><span class="k">НЕ БЕСПОКОИТЬ</span><span class="v muted">нет системы уведомлений</span></div>
+  <div class="kv"><span class="k">МЕЛОДИЯ ЗВОНКА</span><span class="v muted">нет телефонии</span></div>
+  <div class="kv"><span class="k">МАКСИМУМ</span><span class="v">−6 дБ в наушниках · политика</span></div>
+
+  <footer class="foot compact">
+    <span>ЗВУК · MPD 0.24.20</span>
+    <span class="rgt">jack · 44,1 кГц</span>
+  </footer>
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>
