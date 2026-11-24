@@ -1,5 +1,8 @@
 # PLAYER-FEATURES — функционал плеера LG P700
 
+> Публичный технический план. Пометки **[проверить]** означают, что оценка
+> требует замера; пути данных обозначены плейсхолдерами.
+
 > Составлено 24.11.2026 по фактам, снятым с телефона (read-only): MPD 0.24.20,
 > `/etc/mpd.conf`, `mpc`, `idle`, `readpicture`, `evtest`, `/proc`. Код не менялся,
 > настройки MPD не трогались, воспроизведение в ходе аудита не запускалось.
@@ -39,7 +42,7 @@
   при открытии очереди, `albumart` + чтение `cover.jpg` с SD, `seekcur`,
   `setvol ±5`, `random`/`repeat` как два независимых тумблера.
 - Обложка декодируется **синхронно в UI-потоке** при смене трека.
-- Настройки: `/etc/lgtest-settings` (`theme`, `btnlight`), запись неатомарная.
+- Настройки: `<system-settings>` (`theme`, `btnlight`), запись неатомарная.
 - Клавиши: `event1` (Vol±, Home), `event5` (Vol±, Power), удержание Vol ≥0,7 с —
   next/prev.
 
@@ -48,7 +51,7 @@
 | Параметр | Факт |
 |---|---|
 | Версия | `mpd 0.24.20`, протокол `OK MPD 0.24.0` |
-| Конфиг | `music_directory /media/sd/Music`, `playlist_directory /var/lib/mpd/playlists`, `db_file tag_cache`, `state_file state`, `bind 127.0.0.1:6600`, `auto_update yes`, `mixer_type software`, `hw:0,0` |
+| Конфиг | `music_directory /media/sd/Music`, `playlist_directory <mpd-data>/playlists`, `db_file tag_cache`, `state_file state`, `bind <loopback>:6600`, `auto_update yes`, `mixer_type software`, `hw:0,0` |
 | Декодеры | mad, vorbis, flac, opus, faad, wavpack, ffmpeg, pcm |
 | Фильтры | libsamplerate, soxr |
 | Плейлист-плагины | extm3u, m3u, pls, xspf, cue, embcue |
@@ -124,7 +127,7 @@ idle     — только idle/noidle, читается в select(), переп�
 ### 2.2. Индекс библиотеки
 
 Один проход `listallinfo` (или по каталогам, если библиотека огромная — см.
-§6.4) → разбор → **текстовый кэш** `/var/lib/lp7player/index.txt`:
+§6.4) → разбор → **текстовый кэш** `<player-data>/index.txt`:
 
 ```
 #v1 <db_update> <songs> <albums> <artists>
@@ -154,7 +157,7 @@ T<TAB>uri<TAB>title<TAB>artist_id<TAB>album_id<TAB>genre<TAB>year<TAB>track<TAB>
 - Декодирование — **в фоновом потоке**, UI сначала рисует заглушку и приходит
   к обложке, когда готово. Синхронный `stbi_load` на 300 КБ JPEG блокирует
   интерфейс на сотни миллисекунд — сейчас так и происходит.
-- Кэш тамбнейлов: `/var/lib/lp7player/art/<hash>.565`, 96×96 RGB565 = 18 КБ.
+- Кэш тамбнейлов: `<player-data>/art/<hash>.565`, 96×96 RGB565 = 18 КБ.
   500 альбомов ≈ 9 МБ на rootfs (не на SD: карту вынимают).
 - Большая обложка 384×384 не кэшируется на диск, но держится в RAM для
   текущего альбома (≈290 КБ RGB565) и декодируется один раз на альбом, а не на
@@ -167,12 +170,12 @@ T<TAB>uri<TAB>title<TAB>artist_id<TAB>album_id<TAB>genre<TAB>year<TAB>track<TAB>
 
 | Путь | Что | Размер |
 |---|---|---|
-| `/var/lib/lp7player/index.txt` | индекс библиотеки | 0,5–1 МБ на 5 тыс. треков |
-| `/var/lib/lp7player/art/*.565` | тамбнейлы | до 30 МБ |
-| `/var/lib/lp7player/played.log` | история прослушивания (uri, ts) | ротация 2000 строк |
-| `/var/lib/lp7player/bookmarks` | uri → секунда (аудиокниги) | единицы КБ |
-| `/var/lib/lp7player/lastpos` | uri + elapsed каждые 15 с | <1 КБ |
-| `/etc/lgtest-settings` | тема, подсветка, предпочтения плеера | <1 КБ |
+| `<player-data>/index.txt` | индекс библиотеки | 0,5–1 МБ на 5 тыс. треков |
+| `<player-data>/art/*.565` | тамбнейлы | до 30 МБ |
+| `<player-data>/played.log` | история прослушивания (uri, ts) | ротация 2000 строк |
+| `<player-data>/bookmarks` | uri → секунда (аудиокниги) | единицы КБ |
+| `<player-data>/lastpos` | uri + elapsed каждые 15 с | <1 КБ |
+| `<system-settings>` | тема, подсветка, предпочтения плеера | <1 КБ |
 
 Запись настроек и закладок — атомарно (tmp + `rename`), иначе выключение по
 питанию оставит обрезанный файл.
@@ -268,7 +271,7 @@ T<TAB>uri<TAB>title<TAB>artist_id<TAB>album_id<TAB>genre<TAB>year<TAB>track<TAB>
 
 | Фича | Зачем | MPD / данные | UI | P | Слож. |
 |---|---|---|---|---|---|
-| тема, подсветка, лок, питание | есть | `/etc/lgtest-settings` | как сейчас | **P0** | есть |
+| тема, подсветка, лок, питание | есть | `<system-settings>` | как сейчас | **P0** | есть |
 | воспроизведение | режимы в одном месте | `random/repeat/crossfade/RG` | секция с сегментами | P1 | S |
 | библиотека: обновить, кэш, счётчики | обслуживание | `update`, `stats`, наши файлы | 3 строки | P1 | S |
 | таймер сна | удобство | наши таймеры | сегменты 15/30/45/60 | P1 | S |
@@ -604,7 +607,7 @@ MPD, а не в файл: MPD сам их сохраняет в `state` и во�
 
 ### 6.6. Плейлисты и избранное
 
-- Плейлисты MPD — это файлы `.m3u` в `/var/lib/mpd/playlists`; имя = имя
+- Плейлисты MPD — это файлы `.m3u` в `<mpd-data>/playlists`; имя = имя
   файла. Запрещены `/` и управляющие символы, длина ограничена.
 - **Stickers недоступны**: `sticker database is disabled`, в `mpd.conf` нет
   `sticker_file`. SQLite в MPD слинкован, то есть включить можно одной строкой
@@ -640,7 +643,7 @@ MPD, а не в файл: MPD сам их сохраняет в `state` и во�
   `play` не даёт ACK.
 - `state_file_interval` по умолчанию 120 с: при жёстком выключении теряется до
   двух минут изменений очереди. Уменьшить до 15–30 с — одна строка в конфиге.
-- **Закладки (аудиокниги)**: `/var/lib/lp7player/bookmarks`, ключ — uri,
+- **Закладки (аудиокниги)**: `<player-data>/bookmarks`, ключ — uri,
   значение — секунда и время. Для файлов >20 мин при открытии показываем
   «Продолжить с 12:34 / С начала»; авто-резюм — только при включённой
   настройке, иначе можно случайно прыгнуть в середину.
@@ -668,7 +671,7 @@ MPD, а не в файл: MPD сам их сохраняет в `state` и во�
 - 5 полос (60/230/910/3600/14000), вертикальные дорожки 4 px, ползунки 14×14,
   значения −12…+12 dB, подписи 11 caps; сверху ON/OFF и пресеты
   (FLAT/ROCK/VOCAL/BASS/TREBLE) сегментами 88×44.
-- Состояние — в `/etc/lgtest-settings` (`eq=on|off`, `eq_preset`, `eq_bands`).
+- Состояние — в `<system-settings>` (`eq=on|off`, `eq_preset`, `eq_bands`).
 - **Ключевой нюанс интеграции:** DSP принадлежит PCM-сессии, а ею владеет MPD.
   После смены трека/формата настройки EQ может сбросить — переприменять ioctl
   по событию `idle player` (и раз в 5 с, как `lgjack` для маршрута). Без этого

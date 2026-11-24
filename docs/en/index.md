@@ -1,33 +1,37 @@
-[Русский оригинал](../ru/index.md) · **English**
+[Русский](../ru/index.md) · **English**
 
 # Documentation — technical plans
 
-English versions of the project plans are being translated from the Russian
-originals in [`docs/ru/`](../ru/index.md). Until they land, the Russian files
-are the source of truth.
+Russian originals of the plans and studies for the graphite shell project (LG P700). The texts were written for internal use, in working order: these are engineering notes with numbers and decisions, not polished documentation.
 
-Planned documents, one to one with `docs/ru/`:
+English versions live in `docs/en/`; translation is in progress.
 
-| file | about |
+## Map
+
+| file | subject |
 |---|---|
-| `architecture.md` | shell architecture: X session, windows, screens, keyboard, external apps |
-| `design-system.md` | tokens, the 480×800 grid, components, states |
-| `screens.md` | the 15 Metro screens with sizes and behaviour |
-| `metro.md` | what was taken from Windows Phone 7/8, and what was not |
-| `themes.md` | 7 themes, 5 accents, textures for RGB565 |
-| `settings-spec.md` | settings: 11 Android groups mapped onto ours, 26 screens, 35 keys |
-| `input.md` | one on-screen keyboard and input path for our screens and foreign apps |
-| `shell-chrome.md` | notification shade, long Home, task switcher |
-| `player.md` | player features, MPD 0.24, `idle`, `readpicture` |
-| `reader.md` | the reader as a shell screen: TXT, FB2, EPUB, pagination |
-| `apps.md` | app and library audit, P0/P1/P2 priorities |
-| `usb-modes.md` | USB: RNDIS, mass storage, charge-only, serial |
-| `power.md` | power, heat, suspend, running without a battery |
-| `hardware.md` | hardware, kernel, services, known traps |
-| `qa.md` | test plan, burn-in, the `qa/` scripts |
-| `font-medeo.md` | Medeo: tabular figures, baseline, integration |
-| `icons.md` | Phosphor/Lucide/Iconoir, selection and integration |
-| `master-plan.md` | summary: priorities, contradictions, acceptance criteria |
+| [architecture.md](architecture.md) | shell architecture: X session, windows, screens, keyboard, external applications |
+| [install.md](install.md) | installing postmarketOS: kernel, boot image, p9/p20, first boot, recovery |
+| [design-system.md](design-system.md) | tokens, 480×800 grid, components, states |
+| [screens.md](screens.md) | 15 Metro screens with dimensions and behaviour |
+| [metro.md](metro.md) | what is borrowed from Windows Phone 7/8 and what is not |
+| [themes.md](themes.md) | 7 themes, 5 accents, textures for RGB565 |
+| [settings-spec.md](settings-spec.md) | settings: 11 Android groups mapped to ours, 26 screens, 35 keys |
+| [input.md](input.md) | shared on-screen keyboard and input for our own and foreign applications |
+| [shell-chrome.md](shell-chrome.md) | notification shade, long Home, task manager |
+| [player.md](player.md) | player features, MPD 0.24, `idle`, `readpicture` |
+| [reader.md](reader.md) | reader as a shell screen: TXT, FB2, EPUB, pagination |
+| [apps.md](apps.md) | application and library audit, P0/P1/P2 priorities |
+| [usb-modes.md](usb-modes.md) | USB: RNDIS, mass storage, charge-only, serial |
+| [power.md](power.md) | power, heat, suspend, behaviour without a battery |
+| [hardware.md](hardware.md) | hardware, kernel, services, known pitfalls |
+| [qa.md](qa.md) | test plan, burn-in, `qa/` scripts |
+| [font-medeo.md](font-medeo.md) | Medeo: tabular figures, baseline, integration |
+| [icons.md](icons.md) | Phosphor/Lucide/Iconoir, selection and integration |
+| [master-plan.md](master-plan.md) | summary: priorities, contradictions, acceptance criteria |
 
-For now, start with the English [`README.en.md`](../../README.en.md) and
-`os/README.md` for the build, and read `docs/ru/` for everything else.
+## How to read
+
+Start with `master-plan.md`: it contains the summary and the order of work. Then follow your interest: `architecture.md` and `design-system.md` for how the shell is built, `settings-spec.md` for the largest UI chunk, `hardware.md` for platform constraints.
+
+Links inside the texts may point to files of the original working tree (`notes/`, `artifacts/`) that are not present in the public repository.

@@ -13,6 +13,7 @@
 | файл | о чём |
 |---|---|
 | [architecture.md](architecture.md) | архитектура шелла: X-сессия, окна, экраны, клавиатура, внешние приложения |
+| [install.md](install.md) | установка postmarketOS: ядро, boot image, p9/p20, первый запуск, восстановление |
 | [design-system.md](design-system.md) | токены, сетка 480×800, компоненты, состояния |
 | [screens.md](screens.md) | 15 экранов Metro с размерами и поведением |
 | [metro.md](metro.md) | что взято из Windows Phone 7/8 и что нет |

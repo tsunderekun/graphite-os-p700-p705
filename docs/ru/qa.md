@@ -1,15 +1,6 @@
-# QA-PLAN — тестирование и стабильность LG P700 (u0)
+# План тестирования и стабильности
 
-Версия 1.0 · 24.11.2026 · pmOS edge, ядро `3.4.0-CM #23-postmarketOS`,
-режим `player`, 480×800 RGB565, 400 МБ RAM.
-
-**Статус:** это план и заготовки. На телефоне ничего не запускалось, режим,
-сервисы и файлы не менялись. Проверен только синтаксис скриптов
-(`dash -n`, `py_compile`); первый прогон — в maintenance-окне.
-Скрипты: [`notes/qa/`](qa/README.md). Артефакты: `/var/log/qa/` на устройстве,
-`artifacts/qa/` на хосте.
-
----
+План охватывает загрузку, интерфейс, внешние приложения и длительную проверку LG P700. Пороговые значения и критерии ниже описывают план, а не утверждение о прохождении тестов.
 
 ## 1. Цель, границы, допущения
 
@@ -18,7 +9,7 @@
 - fb-плеер: 4 экрана, очередь, темы, настройки, клавиши, лок, питание;
 - X11/десктоп: `session-desktop`, Xorg на fbdev, `fbpan-ng`, openbox/tint2,
   приложения, длинная сессия, отсутствие D-состояний и ребутов;
-- graphite shell — по критериям `notes/shell/OS-DEV-HANDOFF.md` §9 и
+- graphite shell — по критериям `<shell-doc-dir>/OS-DEV-HANDOFF.md` §9 и
   `SCREENS.md` (помечено `N` — ещё не реализовано, тесты станут приёмочными);
 - сеть, SD, звук/наушники, питание, память, температуру/ток;
 - процедуры прошивки, бэкапа, отката и распознавания «кирпича».
@@ -37,7 +28,7 @@ SIM/звонки (`SIM busy`), Bluetooth (`hci_smd`), GPS (`GPSNMEA`), каме�
 | Boot | `/dev/mmcblk0p9`; текущий `artifacts/boot-rot.img` (MD5 `F5C3D546D214E2F5CA3857F7C0CB04E8`, 8 093 696 Б) |
 | Откат | `artifacts/boot-rot-KNOWN-GOOD-r14.img` (MD5 `73730BFD117B1EA1BA7CA4FF07FF2100`, 8 138 752 Б) |
 | SD | `/dev/mmcblk1p1`, vfat, UUID `<sd-uuid>`, `/media/sd` |
-| Сеть | RNDIS `172.16.42.1` (управление), Wi-Fi `<phone-ip>` (объект теста) |
+| Сеть | RNDIS `<RNDIS-IP>` (управление), Wi-Fi `<device-ip>` (объект теста) |
 | Доступ | `user`/`<device-password>`, sudo `<device-password>` |
 | Режим | `/etc/lgtest-mode` = `player`; альтернатива `desktop`; `shell` — план |
 
@@ -212,7 +203,7 @@ SIM/звонки (`SIM busy`), Bluetooth (`hci_smd`), GPS (`GPSNMEA`), каме�
 | A-05 | Один тяжёлый app | браузер+файлы одновременно не держим (400 МБ) | M | P0 |
 | A-06 | Закрытие | нет зомби, память возвращается | A | P1 |
 | A-07 | Home из приложения | приложение скрыто, лончер, возврат | N | P0 |
-| A-08 | Заметки | ввод, сохранение в `/home/user/notes/`, после ребута на месте | N | P1 |
+| A-08 | Заметки | ввод, сохранение в `<user-notes-dir>/`, после ребута на месте | N | P1 |
 | A-09 | Клавиатура не теряет фокус | переключение RU/EN, Shift, Backspace | N | P1 |
 | A-10 | 30 мин с открытым приложением | RSS стабилен, нет OOM | S | P1 |
 
@@ -303,10 +294,10 @@ SIM/звонки (`SIM busy`), Bluetooth (`hci_smd`), GPS (`GPSNMEA`), каме�
 ### 3.1. Схема
 ```
 Windows (.)
-  notes/qa/host/qa.py  ── SSH (RNDIS 172.16.42.1) ──┐
-  notes/qa/host/qadiff.py                            │
+  <qa-dir>/host/qa.py  ── SSH (RNDIS <RNDIS-IP>) ──┐
+  <qa-dir>/host/qadiff.py                            │
                                                      ▼
-                                      /root/qa/{smoke,burnin,collect,probe,latency}.sh
+                                      <device-qa-dir>/{smoke,burnin,collect,probe,latency}.sh
                                                      │
                                       /var/log/qa/  (артефакты)
                                                      │
@@ -319,7 +310,7 @@ Windows (.)
 - `qa.py` делает `sudo -S` неинтерактивно, пароль из `LGP700_PASS`.
 
 ### 3.2. Что уже автоматизировано
-Существующие X-скрипты не дублируем: `notes/desktop/test-x.sh` (меняет
+Существующие X-скрипты не дублируем: `<desktop-test-dir>/test-x.sh` (меняет
 устройство), `collect-x-state.sh` (read-only), `restore-player.sh` остаются
 основным инструментом X-теста; `qa.py` добавляет к ним watchdog, метрики и
 сбор артефактов.
@@ -345,19 +336,19 @@ Windows (.)
 
 ### 3.3. Как запускать (без интерактива)
 ```sh
-python notes/qa/host/qa.py stage
-python notes/qa/host/qa.py smoke --shot
-python notes/qa/host/qa.py smoke --strict --require-playing
-python notes/qa/host/qa.py collect --label after-x --shot --full
-python notes/qa/host/qa.py burnin start --hours 24 --label rc1 --watch
-python notes/qa/host/qa.py burnin status
-python notes/qa/host/qa.py burnin stop
-python notes/qa/host/qa.py watch --hours 1 --interval 30
-python notes/qa/host/qa.py shot --name now --baseline notes/qa/baselines/now.png
+python <qa-dir>/host/qa.py stage
+python <qa-dir>/host/qa.py smoke --shot
+python <qa-dir>/host/qa.py smoke --strict --require-playing
+python <qa-dir>/host/qa.py collect --label after-x --shot --full
+python <qa-dir>/host/qa.py burnin start --hours 24 --label rc1 --watch
+python <qa-dir>/host/qa.py burnin status
+python <qa-dir>/host/qa.py burnin stop
+python <qa-dir>/host/qa.py watch --hours 1 --interval 30
+python <qa-dir>/host/qa.py shot --name now --baseline <qa-dir>/baselines/now.png
 ```
 Прямой запуск (если хост недоступен):
 ```sh
-setsid sh /root/qa/burnin.sh --hours 24 >/var/log/burnin.out 2>&1 </dev/null &
+setsid sh <device-qa-dir>/burnin.sh --hours 24 >/var/log/burnin.out 2>&1 </dev/null &
 ```
 
 ### 3.4. Ключевые проверки и как они устроены
@@ -534,7 +525,7 @@ Baseline — только с устройства, не дизайн-ренде�
 | Состояние | `/proc/*`, `/sys/class/graphics/fb0/*`, power_supply, switch, asound | при зависании |
 | Кадр | `/dev/fb0` (768000 Б) | только guarded, по одному |
 
-`collect.sh` складывает всё в tar.gz и **редактирует** `psk/password/secret`;
+`collect.sh` складывает всё в tar.gz и **редактирует** `credential/password/secret`;
 `/etc/shadow` и SSH-ключи не копируются.
 
 ### 5.2. Порядок после ребута
@@ -555,7 +546,7 @@ Baseline — только с устройства, не дизайн-ренде�
 8. Только после сохранения — решать про откат/перепрошивку.
 
 ### 5.3. Если SSH мёртв
-- ping RNDIS `172.16.42.1` и Wi-Fi `<phone-ip>`;
+- ping RNDIS `<RNDIS-IP>` и Wi-Fi `<device-ip>`;
 - если ping есть, а TCP:22 нет — userspace завис (как `hci_smd`): reflash boot
   через fastboot, rootfs не трогать;
 - если USB нет вовсе — проверить диспетчер устройств: `18D1:D00D` (fastboot),
@@ -758,7 +749,7 @@ MD5 чтения должен совпасть с MD5 образа (с учёт�
 | SD отваливается | `mmc1: error`, mount пропал | нет музыки, MPD падает | бэкап, не писать без нужды | `dmesg`, `df` |
 | PowerShell калечит кавычки | `grep "a&#124;b"` → пайп | ложные команды | скрипты на телефоне, `qa.py` | ревью команд |
 | Время уезжает | часы/дата неверные | метрики/диффы ломаются | интервалы по uptime, маски часов | `date`, CSV |
-| Секреты в логах | `psk=` в архиве | утечка | redact, не копировать shadow/ключи | ревью tar |
+| Секреты в логах | `credential=` в архиве | утечка | redact, не копировать shadow/ключи | ревью tar |
 | Ядро не то | `#22` вместо `#23` | результаты недействительны | пин `uname`, smoke FAIL | `--expect-kernel` |
 | Скрипт меняет состояние | трек/громкость/режим | путаница в тесте | snapshot/restore, `mark.sh` | diff meta |
 | Нет термодатчика | `CONFIG_THERMAL=n` | перегрев незаметен | АКБ temp + ИК-термометр (`measure_ir.sh`) | `temp` |
@@ -770,7 +761,7 @@ MD5 чтения должен совпасть с MD5 образа (с учёт�
 ## 10. Артефакты (что уже лежит)
 
 ```
-notes/qa/
+<qa-dir>/
   README.md                 инструкция и ограничения
   lib.sh                    общие функции; guarded fb; dmesg-категории
   smoke.sh                  health-check (read-only, --shot)
@@ -782,11 +773,11 @@ notes/qa/
   boot-capture.start        опциональный OpenRC-хук (last_kmsg при boot)
   host/qa.py                неинтерактивный SSH-раннер
   host/qadiff.py            дифф кадров PNG/RAW, маски, порог
-notes/QA-PLAN.md            этот документ
+<QA-plan-file>            этот документ
 ```
 
 Все скрипты проверены `dash -n`; Python — `py_compile`. На устройстве
-**не запускались**. `notes/qa/baselines/` содержит только README: baseline
+**не запускались**. `<qa-dir>/baselines/` содержит только README: baseline
 снимается с устройства, а не берётся из макетов.
 
 ---

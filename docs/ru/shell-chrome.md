@@ -1,17 +1,6 @@
-# SHELL-CHROME-PLAN — уведомления и шторка задач
+# Уведомления и переключение задач
 
-Статус: план, 25.11.2026. Код не менялся, телефон не трогали.
-Основание: `notes/APP-INTEGRATION-PLAN.md` (§5 диспетчер, §C switcher),
-`notes/METRO-RESEARCH.md` (action center, long-press, live tiles),
-`notes/shell/DESIGN-SYSTEM.md`, `notes/shell/SCREENS.md`,
-`notes/SHELL-TODO.md`, фактический код `os/` (apphost, shade, ui, app).
-
-Документ закрывает два пункта `SHELL-TODO.md`: «Долгое Home → шторка
-задач» и «Уведомления как система» (сейчас шторка рисует две карточки
-жёстко в `shade.cpp`, а `set_sound.cpp` честно пишет «нет системы
-уведомлений»).
-
----
+Документ описывает план уведомлений, панели быстрых настроек и переключателя внешних приложений. Приоритеты P0/P1/P2 и критерии проверки сохранены из плана.
 
 ## 0. Коротко
 
@@ -1005,7 +994,7 @@ P0-B требует телефона, P0-A полностью проверяет
 - `GRAPHITE_NOTIFY_DEMO=6` — 6 фейковых уведомлений (2 ongoing, 4 alert,
   у одного 2 действия);
 - `GRAPHITE_TASKS_DEMO=3` — 3 задачи с превью-заглушками;
-- `GRAPHITE_RUN_DIR=/tmp/graphite` — чтобы не лезть в `/run` на хосте.
+- `GRAPHITE_RUN_DIR=<runtime-dir>/graphite` — чтобы не лезть в `/run` на хосте.
 
 | # | Проверка | Ожидание |
 |---|---|---|
@@ -1043,7 +1032,7 @@ P0-B требует телефона, P0-A полностью проверяет
 - Read-only проверка до теста: `grep -E 'MemTotal|MemFree|MemAvailable|Buffers|Cached' /proc/meminfo`
   (есть ли `MemAvailable` на 3.4) и `apk info -e libxext` (для P1 heads-up).
 - `XGetImage` + downscale: лог `GRAPHITE_APPHOST_DEBUG=1`,
-  `/tmp/apphost.log`, метка `shot ms=…`; цель <100 мс.
+  `<runtime-dir>/apphost.log`, метка `shot ms=…`; цель <100 мс.
 - Память: `MemAvailable` до/после 2–3 задач; `ps -o rss` для шелла,
   Xorg, приложений; превью — 192 КБ × N (проверить по коду/логу).
 - Диск: `ls -l /var/lib/graphite/notifications.jsonl`; запись только по

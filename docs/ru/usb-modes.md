@@ -1,5 +1,8 @@
 # USB-MODES — режимы USB-порта LG P700 (u0)
 
+> Публичный технический план. Указанные сетевые адреса и локальные реквизиты
+> обезличены; проверьте параметры своей системы перед запуском примеров.
+
 > Дата пробы: 24.11.2026. Плата: LG Optimus L7 P700 (MSM7227A), pmOS/Alpine,
 > ядро `3.4.0-CM #23-postmarketOS`. Гаджет — **старый Android**
 > (`CONFIG_USB_G_ANDROID=y`), **не configfs**.
@@ -47,21 +50,21 @@
 | `android0/enable` | `1` | гаджет поднят |
 | `android0/functions` | `rndis` | разделитель — **запятая** |
 | `android0/state` | `CONFIGURED` | хост забрал конфигурацию |
-| `android0/idVendor` | `18d1` | Google VID (не LG `1004`) |
-| `android0/idProduct` | `d001` | текущий PID RNDIS |
+| `android0/idVendor` | `<rndis-vid>` | Google VID (не LG `1004`) |
+| `android0/idProduct` | `<rndis-pid>` | текущий PID RNDIS |
 | `iProduct` / `iManufacturer` | `Android` / `Android` | строки для хоста |
-| `iSerial` | `0123456789ABCDEF` | заглушка |
+| `iSerial` | `<serial-placeholder>` | заглушка |
 | `bDeviceClass` | `0` | composite, классы на интерфейсах |
-| `rndis0` | `UP`, `172.16.42.1/16`, MTU 1500 | адрес живёт в netdev |
+| `rndis0` | `UP`, `<device-ip>/16`, MTU 1500 | адрес живёт в netdev |
 | `/dev/mtp_usb` | `crw------- 10:24` | создан при probe, **не** значит «MTP работает» |
 | `/dev/android_adb` | `crw------- 10:27` | создан при probe; adbd нет |
 | `/dev/ttyGS0` | **нет** | serial ни разу не включали |
 | `f_mass_storage/lun` | symlink → `.../gadget/lun0` | LUN есть **всегда** |
 | `lun0/{file,ro,nofua,cdrom}` | `` / `0` / `0` / `0` | `file` пуст = нет носителя |
-| Корень | 2.7 ГБ, занято 1.6 ГБ, **свободно 1004 МБ** | 256 МБ образ влезает |
-| SD | `/dev/mmcblk1p1`, vfat, 29.5 ГБ, занято 131 МБ | UUID `<sd-uuid>`, `/media/sd` |
+| Корень | свободное место проверить; 256 МБ образ требует места с запасом |
+| SD | `<sd-device>`, vfat, объём зависит от карты | UUID `<sd-uuid>`, `/media/sd` |
 | MPD | `db_file=/var/lib/mpd/tag_cache` (eMMC), `auto_update yes` | база и обложки **не на SD** |
-| `unudhcpd.rndis0` | `supervise-daemon`, server `172.16.42.1`, client `172.16.42.2` | в runlevel `default` |
+| `unudhcpd.rndis0` | `supervise-daemon`, server `<device-ip>`, client `<host-ip>` | в runlevel `default` |
 
 Инструменты на телефоне (проверено): `flock`, `timeout`, `fuser`, `lsof`,
 `losetup`, `mkfs.fat`, `dosfsck`/`fsck.vfat`, `mpc`, `sync` — всё есть.
@@ -152,7 +155,7 @@ VERIFY ──► ARMED (30 с) ──confirm──► KEPT                      
 |---|---|---|---|---|
 | `enable` | `android0/enable` | `0`/`1` | да | первым и последним |
 | `functions` | `android0/functions` | `rndis`, `mass_storage`, `charge_only`, `serial`, … через **запятую** | да | только при `enable=0` |
-| `idVendor`/`idProduct` | `android0/…` | hex, напр. `18d1`/`d001` | желательно | до `enable=1` |
+| `idVendor`/`idProduct` | `android0/…` | hex, напр. `<rndis-vid>`/`<rndis-pid>` | желательно | до `enable=1` |
 | `iProduct` | `android0/iProduct` | строка ≤ 126 | желательно | до `enable=1` |
 | `state` | `android0/state` | ro | — | читаем после |
 | `lun/file` | `f_mass_storage/lun/file` | путь к блоку/файлу; `""` = eject | для MS | при `enable=0` |
@@ -166,7 +169,7 @@ VERIFY ──► ARMED (30 с) ──confirm──► KEPT                      
 
 ### 3.1.1. VID/PID по режимам (рекомендация)
 
-Текущие `18d1:d001` — не дефолт ядра (в дефконфиге `1004:61fc`); их выставил
+Текущие `<rndis-vid>:<rndis-pid>` — не дефолт ядра (в дефконфиге `1004:61fc`); их выставил
 кто-то из userspace/диагностики (точный источник не подтверждён).
 **Не наследовать:** helper пишет VID/PID явно перед каждым `enable=1`.
 Уникальный PID на режим нужен, чтобы Windows не переиспользовал
@@ -174,12 +177,12 @@ VERIFY ──► ARMED (30 с) ──confirm──► KEPT                      
 
 | Режим | VID:PID | Почему |
 |---|---|---|
-| RNDIS (и rollback) | `18d1:d001` | уже проверен на этом хосте, SSH работает |
+| RNDIS (и rollback) | `<rndis-vid>:<rndis-pid>` | уже проверен на этом хосте, SSH работает |
 | MS SD | `1004:61fc` | LG VID, mass-storage класс; Windows ставит USBSTOR |
 | MS образ | `1004:61fd` | отдельный PID, чтобы отличать в `lsusb`/диспетчере |
 | Charge-only | `1004:61fe` | HID-заглушка |
 | Serial | `1004:61ff` | CDC ACM |
-| MTP/PTP/ADB (не выпускать) | `18d1:d002`/`d003`/`d004` | только для экспериментов |
+| MTP/PTP/ADB (не выпускать) | `<rndis-vid>:d002`/`d003`/`d004` | только для экспериментов |
 
 Проверка на хосте: `lsusb -d 1004:` (Linux), `Get-PnpDevice` (Windows).
 Если Windows после смены режима показывает «Код 10» — «Удалить устройство»
@@ -207,7 +210,7 @@ VERIFY ──► ARMED (30 с) ──confirm──► KEPT                      
 5) VERIFY: timeout 5 читать state каждые 100 мс до CONNECTED/CONFIGURED
 6) POST:
    - RNDIS: ip link set rndis0 up; rc-service unudhcpd.rndis0 start (идемпотентно);
-     проверить carrier (ip -br link) и 172.16.42.1
+     проверить carrier (ip -br link) и <device-ip>
    - MS: ничего (файл уже отдан)
    - serial: запустить getty на /dev/ttyGS0 (см. §6.4)
 7) ARM: watchdog 30 с (см. §7.4)
@@ -250,7 +253,7 @@ VERIFY ──► ARMED (30 с) ──confirm──► KEPT                      
 1) timeout 5 echo 0 > enable
 2) echo "" > lun/file                # если трогали MS
 3) echo rndis > functions            # read-back
-4) echo 18d1 > idVendor; echo d001 > idProduct; echo Android > iProduct
+4) echo "$RNDIS_VID" > idVendor; echo "$RNDIS_PID" > idProduct; echo Android > iProduct
 5) timeout 5 echo 1 > enable; read-back
 6) ip link set rndis0 up; rc-service unudhcpd.rndis0 start
 7) если SD был смонтирован до операции: mount /media/sd; проверить;
@@ -287,7 +290,7 @@ SD монтируется по `fstab`, MPD стартует из `local.d`.
 
 | Режим / опция | `functions` | Что видит хост | Готовность | Главный риск |
 |---|---|---|---|---|
-| **RNDIS** (по умолчанию) | `rndis` | RNDIS/CDC-Ether, `18d1:d001`, DHCP `172.16.42.2`, SSH `172.16.42.1` | работает | нет |
+| **RNDIS** (по умолчанию) | `rndis` | RNDIS/CDC-Ether, `<rndis-vid>:<rndis-pid>`, DHCP `<host-ip>`, SSH `<device-ip>` | работает | нет |
 | **SD-карта** | `mass_storage` | SCSI-диск 29.5 ГБ, FAT (p1 как «superfloppy») | нужен `umount` + стоп MPD | порча FAT, MPD недоступен |
 | **Образ 256 МБ** | `mass_storage` | SCSI-диск 256 МБ, FAT32, `/dev/loopN` | образ создаётся один раз | порча только образа |
 | **Только зарядка** | `charge_only` | HID-устройство (заглушка), данных нет | работает | SSH пропадёт, ток **не** вырастет |
@@ -306,11 +309,11 @@ SD монтируется по `fstab`, MPD стартует из `local.d`.
 
 ## 5. Mass storage
 
-### 5.1. SD-карта: отдать `/dev/mmcblk1p1`
+### 5.1. SD-карта: отдать `<sd-device>`
 
 **Предусловия (жёсткие):**
 - `mountpoint -q /media/sd` или раздел не смонтирован;
-- `/dev/mmcblk1p1` — блочное устройство, размер 20–64 ГБ, не `mmcblk0*`;
+- `<sd-device>` — блочное устройство, размер объём, заданный в конфигурации, не `mmcblk0*`;
 - MPD остановлен (не только pause): `mpc stop; pkill -TERM mpd`;
 - нет держателей: `fuser -m /media/sd`, `lsof +f -- /media/sd`;
 - заряд/АКБ: без АКБ большие копии на 500-мА порту — риск просадки VBAT
@@ -326,14 +329,14 @@ umount /media/sd || { fuser -vm /media/sd; exit 1; }
 # gadget выключен, functions уже mass_storage
 # если предыдущий носитель был открыт: echo "" > .../lun/file
 echo 1 > /sys/class/android_usb/android0/f_mass_storage/lun/ro   # RO по умолчанию
-echo /dev/mmcblk1p1 > /sys/class/android_usb/android0/f_mass_storage/lun/file
+echo <sd-device> > /sys/class/android_usb/android0/f_mass_storage/lun/file
 echo 1 > /sys/class/android_usb/android0/enable
 ```
 
 **Что видит хост:** один SCSI-диск (LUN0) с FAT-томом в начале. Windows
 монтирует букву, Linux — `/dev/sdX` (не `sdX1`: таблицы разделов нет,
 экспортирован раздел). Это нормально и безопаснее, чем отдавать весь
-`mmcblk1` (хост не сможет переразметить карту).
+`<sd-device>` (хост не сможет переразметить карту).
 
 **Read-only vs RW:**
 - RO (`ro=1`) — режим по умолчанию: бэкап, «вытащить музыку», показ файлов.
@@ -447,7 +450,7 @@ losetup -d /dev/loopN
 разреженный и растёт по мере записи хоста — следить за `df /` в UI.
 Образ не является бэкапом: это «обменник», не хранилище.
 
-### 5.3. Почему не отдавать весь `mmcblk1`
+### 5.3. Почему не отдавать весь `<sd-device>`
 
 Хост увидит MBR и сможет переразметить/форматировать карту. Отдача `p1`
 исключает изменение таблицы разделов; максимум — испортить FAT внутри p1,
@@ -493,7 +496,7 @@ echo "" > $L/file
 losetup -d /dev/loop0
 sync
 echo rndis > $G/functions
-echo 18d1 > $G/idVendor; echo d001 > $G/idProduct
+echo "$RNDIS_VID" > $G/idVendor; echo "$RNDIS_PID" > $G/idProduct
 echo Android > $G/iProduct
 echo 1 > $G/enable; cat $G/enable
 ip link set rndis0 up
@@ -515,7 +518,7 @@ descriptor, 1 endpoint), сделанная LG специально, чтобы 
 перечислялся на ICS+ хостах, но не поднимал RNDIS/ADB/storage.
 
 - **Ток не меняется.** `CONFIG_USB_GADGET_VBUS_DRAW=500` → `bMaxPower=250`
-  (500 мА) в конфигурации; порт ПК всё равно даёт не больше 500 мА,
+  (ток порта) в конфигурации; порт ПК всё равно даёт не больше ток порта,
   зарядник — по своему DCP-детекту. `charge_only` не «ускоряет заряд».
 - **Что реально даёт:** хост не устанавливает RNDIS/диск, меньше событий
   и драйверов, нет сетевого интерфейса и SSH, чище «оставь на ночь».
@@ -525,7 +528,7 @@ descriptor, 1 endpoint), сделанная LG специально, чтобы 
   **[Т 0.5]** На строгом хосте, который реально ограничивает ток до
   конфигурации, `enable=0` может дать 100 мА вместо 500; на обычном ПК
   и на заряднике разницы нет. Поэтому «зарядка» в UI — это `charge_only`
-  (перечисляется, получает свои 500 мА), а `off` — для тишины и минимума
+  (перечисляется, получает свои ток порта), а `off` — для тишины и минимума
   прерываний, не «чтобы быстрее заряжалось».
 - **Когда применять:** ночная зарядка, демонстрация «телефон просто
   заряжается», отладка «не мешает ли RNDIS сну/питанию».
@@ -610,7 +613,7 @@ root у любого, кто подошёл.
 ### 7.1. Место в дереве
 
 - S2 «Сеть», строка 6 сейчас: «USB-сеть (RNDIS)» + switch.
-  **Меняем** на drill-in: «USB» → значение «RNDIS · 172.16.42.1» → S2.2.
+  **Меняем** на drill-in: «USB» → значение «RNDIS · <device-ip>» → S2.2.
 - S2.2 «USB», подпись шапки `РЕЖИМ ПОРТА · <MODE>`.
 - В `SETTINGS-SPEC.md` §2.3 добавить S2.2, в §2.4 — спецификацию ниже;
   формулировку §1.2 «MTP нет и не будет» уточнить: «функция в ядре есть,
@@ -624,17 +627,17 @@ root у любого, кто подошёл.
 ┌──────────────────────────────────────────────┐ 32  статус-строка
 │ ‹  USB                         РЕЖИМ ПОРТА  │ 56  шапка
 ├──────────────────────────────────────────────┤
-│ Сейчас        RNDIS · 172.16.42.1            │ 44  info
+│ Сейчас        RNDIS · <device-ip>            │ 44  info
 │ Хост          подключён · USB 2.0 HS         │ 44  info
-│ Питание       USB-порт ПК · 500 мА · без АКБ │ 44  info (warn)
+│ Питание       USB-порт ПК · ток порта · без АКБ │ 44  info (warn)
 │ РЕЖИМ                                        │ 22  метка
-│ ◉ RNDIS            SSH 172.16.42.1 · обычно  │ 56  radio
+│ ◉ RNDIS            SSH <device-ip> · обычно  │ 56  radio
 │ ○ SD-карта         29,5 ГБ · MPD остановится │ 56  radio
 │ ○ Образ 256 МБ     SD останется в системе    │ 56  radio
 │ ○ Только зарядка   данных нет · SSH пропадёт │ 56  radio
 │ ○ Консоль (serial) ttyGS0 ↔ COM · отладка    │ 56  radio
 │ ПОДРОБНЕЕ                                    │ 22  метка
-│ Скорость и ID      18d1:d001 · high speed    │ 44  info
+│ Скорость и ID      <rndis-vid>:<rndis-pid> · high speed    │ 44  info
 │ Что это значит     тап → шторка              │ 44  info
 ├──────────────────────────────────────────────┤
 │ [ Откат через 27 с ]            [ Оставить ] │ 44  баннер (только в ARMED)
@@ -649,8 +652,8 @@ root у любого, кто подошёл.
 
 | Строка | Подпись 11 `dim` | Что делает |
 |---|---|---|
-| RNDIS | «SSH 172.16.42.1 · по умолчанию» | `functions=rndis`, `18d1:d001` |
-| SD-карта | «29,5 ГБ · MPD остановится» | `mass_storage` + `mmcblk1p1`, RO по умолчанию |
+| RNDIS | «SSH <device-ip> · по умолчанию» | `functions=rndis`, `<rndis-vid>:<rndis-pid>` |
+| SD-карта | «29,5 ГБ · MPD остановится» | `mass_storage` + `<sd-device-partition>`, RO по умолчанию |
 | Образ 256 МБ | «обменник на eMMC · SD остаётся» | `mass_storage` + loop на `usbshare.img` |
 | Только зарядка | «данных нет · SSH пропадёт» | `charge_only` (+ галочка «не показываться хосту» = `enable=0`) |
 | Консоль (serial) | «ttyGS0 ↔ COM · для отладки» | `serial` + getty по подтверждению |
@@ -667,7 +670,7 @@ MTP/PTP/ADB в списке **не показываем** — в «Лабора�
   На ПК извлекайте только через “Безопасное извлечение”.» → «Отдать» /
   «Отмена».
 - **Только зарядка:** «SSH и файлы по USB пропадут. Быстрее заряжаться не
-  станет: порт ПК всё равно 500 мА.» → «Включить» / «Отмена».
+  станет: порт ПК всё равно ток порта.» → «Включить» / «Отмена».
 - **Консоль:** «Любой, кто подключит кабель, получит вход в систему
   (логин + пароль). Только для отладки.» → «Включить» / «Отмена».
 - **Возврат из SD:** «Вернуть SD в систему? Музыка снова станет доступна,
@@ -713,7 +716,7 @@ MTP/PTP/ADB в списке **не показываем** — в «Лабора�
   извлечение”».
 - Зарядка: «SSH пропадёт; ток не вырастет; вернуть — только с телефона».
 - Консоль: «Это вход в систему; выключите после использования».
-- Питание без АКБ: «Порт ПК 500 мА, АКБ нет: большие копии могут
+- Питание без АКБ: «При недостаточном питании большие копии могут
   перезагрузить телефон» (проверять `batt_volt_raw=0`).
 - При `factory_cable=6000`: «Factory mode: переключение заблокировано
   ядром» — режимы не показывать.
@@ -873,8 +876,8 @@ mpc status
 zcat /proc/config.gz | grep -E 'USB_G_ANDROID|VBUS_DRAW|BLK_DEV_LOOP|VFAT|CONFIGFS'
 ```
 
-Ожидаемо: `1 / rndis / CONFIGURED / 18d1 / d001`, пустой `lun/file`,
-`rndis0 UP 172.16.42.1`, свободно ~1004 МБ. Это точка возврата для
+Ожидаемо: `1 / rndis / CONFIGURED / <rndis-vid> / <rndis-pid>`, пустой `lun/file`,
+`rndis0 UP <device-ip>`, свободное место соответствует конфигурации. Это точка возврата для
 сравнения «до/после».
 
 ### 9.2. Матрица
@@ -904,13 +907,13 @@ Get-Disk | Format-Table Number,FriendlyName,Size,BusType
 Get-Volume | Format-Table DriveLetter,FileSystemLabel,Size
 Get-NetAdapter | Where-Object {$_.InterfaceDescription -like "*RNDIS*"}
 ```
-Ожидаемо: RNDIS → сетевой адаптер с 172.16.42.2; ms → «Съемный диск»
+Ожидаемо: RNDIS → сетевой адаптер с <device-ip>; ms → «Съемный диск»
 (USBSTOR); charge → HID; serial → COMx. При смене режима смотреть
 «Безопасное извлечение» и `pnputil /enum-devices /connected`.
 
 **Linux:**
 ```sh
-lsusb -v -d 18d1: 2>/dev/null | grep -E 'bInterfaceClass|bNumEndpoints'
+lsusb -v -d <rndis-vid>: 2>/dev/null | grep -E 'bInterfaceClass|bNumEndpoints'
 lsusb -v -d 1004: 2>/dev/null | grep -E 'bInterfaceClass|bNumEndpoints'
 dmesg -w | grep -E 'usb|sd|cdc_acm|rndis'
 lsblk -o NAME,SIZE,FSTYPE,LABEL,TRAN
@@ -948,7 +951,7 @@ fsck.vfat -n /dev/sdX        # после eject, не во время
 |---|---|---|
 | Порча FAT на SD (RW) | **высокий** | RO по умолчанию; «Безопасное извлечение»; `sync`; `fsck -n`; RW только по подтверждению |
 | Порча образа при выдёргивании | средний | loop + `blockdev --flushbufs`; `fsck`; образ — расходник |
-| Экспорт не того раздела | **высокий** | whitelist: только `mmcblk1p1` или файл в `/var/lib/lg-usb`; отказ на `mmcblk0*`, `ANDROID!`, размер <1 МБ/>64 ГБ |
+| Экспорт не того раздела | **высокий** | whitelist: только `<sd-device-partition>` или файл в `/var/lib/lg-usb`; отказ на `mmcblk0*`, `ANDROID!`, размер <1 МБ/>64 ГБ |
 | Экспорт смонтированного раздела | высокий | проверка `/proc/mounts` + `fuser`; отказ, если mountpoint |
 | Потеря SSH (charge/off/MS) | средний | авто-откат 30 с; ребут возвращает RNDIS; serial как rescue; не делать charge/off дефолтом |
 | `enable=0` завис | средний | `timeout 5`, 2 попытки, затем `REBOOT_REQUIRED`; не циклиться |
@@ -969,7 +972,7 @@ fsck.vfat -n /dev/sdX        # после eject, не во время
 **Чего не делать:**
 
 1. Не отдавать смонтированный раздел (ядро не заблокирует — см. §1.2).
-2. Не экспортировать `mmcblk0*` (rootfs/boot/modem) — только `mmcblk1p1`
+2. Не экспортировать `mmcblk0*` (rootfs/boot/modem) — только `<sd-device-partition>`
    или файл в `/var/lib/lg-usb`.
 3. Не писать `ro` после `file` (будет `-EBUSY`), не писать `functions`
    при `enable=1` (тоже `-EBUSY`).
@@ -1012,7 +1015,7 @@ fsck.vfat -n /dev/sdX        # после eject, не во время
 
 **Снять T0 (read-only) и реализовать только `lg-usb-mode status`/`selftest`,
 без единой записи в sysfs.** Это фиксирует точку возврата (текущие
-`enable=1`, `functions=rndis`, `18d1:d001`, пустой LUN, свободное место)
+`enable=1`, `functions=rndis`, `<rndis-vid>:<rndis-pid>`, пустой LUN, свободное место)
 и даёт UI честный источник данных. Первое реальное переключение — после
 этого, на стенде, в порядке: **RNDIS → образ 256 МБ → RNDIS** (SD не
 трогаем), с проверкой auto-rollback и обрыва кабеля. Отдача SD — последней,

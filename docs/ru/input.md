@@ -1,5 +1,8 @@
 # INPUT-PLAN — единый текстовый ввод в graphite shell
 
+> Публичный план изменений. Здесь описаны целевая архитектура и критерии
+> проверки; текст не утверждает, что эти изменения уже реализованы.
+
 > Дата: 24.11.2026. Только план: код не менялся, телефон не трогали (read-only).
 > Основа — чтение `os/src/osk.cpp`, `os/screens/notes.cpp`, `os/screens/terminal.cpp`,
 > `os/screens/files.cpp`, `os/src/app.cpp`, `os/src/apphost.cpp`,
@@ -713,7 +716,7 @@ struct InputState {
 
 ### 7.2. Персистентность
 
-`cfg` читает `/etc/lgtest-settings` (путь по умолчанию, `graphite.h:78`).
+`cfg` читает `<system-settings>` (путь по умолчанию, `graphite.h:78`).
 Пользовательские настройки ввода писать туда не надо: файл системный. Использовать
 `settings_save_key(key, value, path)` с путём
 `~/.config/graphite/input.conf` (функция уже умеет произвольный путь и мержит
