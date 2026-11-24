@@ -38,7 +38,7 @@ Bluetooth, GPS, SIM and calls, the camera and GPU acceleration are not considere
 
 ## Installation
 
-The postmarketOS port is archived and based on a downstream 3.4 kernel. Installation is experimental: an unlocked bootloader, V20 baseband and TWRP are required. It can erase data or leave the phone unable to boot. Read the [full guide](docs/en/install.md) or the [Russian guide](docs/ru/install.md) first, and have a recovery path ready.
+The postmarketOS port is archived and based on a downstream 3.4 kernel. Installation is experimental: an unlocked bootloader, V20 baseband and a ZIP-capable recovery are required (the verified unit runs ClockworkMod 6.0.3.2). It can erase data or leave the phone unable to boot. Read the [full guide](docs/en/install.md) or the [Russian guide](docs/ru/install.md) first, and have a recovery path ready.
 
 There is no ready-to-flash recovery ZIP yet; one is in preparation. The guide covers a manual installation path and does not guarantee it will work on every device revision.
 
