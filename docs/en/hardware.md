@@ -1,8 +1,8 @@
-# LG P700 hardware platform
+# LG P700/P705 hardware platform
 
 ## Main specifications
 
-- Device: LG Optimus L7 P700, Qualcomm MSM7227A platform with a single-core Cortex-A5.
+- Device: LG Optimus L7 P700/P705, Qualcomm MSM7227A platform with a single-core Cortex-A5. The verified unit is a P705 (`u0`); stock `p14` may report P700.
 - Graphics: Adreno 200. The shell does not use GPU acceleration and does not assume the GPU is operational.
 - Memory: 512 MB RAM. Less is available to user processes after the kernel and services are accounted for.
 - Storage: 4 GB eMMC. Partition p9 holds the boot image (about 8 MiB); p20 is used as the root filesystem. Do not write partitions without a verified partition map and backup.

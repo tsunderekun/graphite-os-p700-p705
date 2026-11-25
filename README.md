@@ -20,6 +20,7 @@ Graphite shell — полноэкранная Linux-оболочка на Xlib �
 ## Железо
 
 - LG Optimus L7 P700/P705, Qualcomm MSM7227A.
+- Тестовый экземпляр — **P705** (`u0`); в stock `p14` стоит P700-совместимый SlimKat, поэтому `build.prop` может называть его P700.
 - Экран 480×800, 16 бит, RGB565.
 - 512 МБ RAM и eMMC 4 ГБ.
 - Alpine Linux / postmarketOS на архивном downstream-ядре 3.4.

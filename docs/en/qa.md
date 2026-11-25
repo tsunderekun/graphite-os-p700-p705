@@ -1,6 +1,6 @@
 # Test and Stability Plan
 
-This plan covers boot, the interface, external applications, and extended testing of the LG P700. The thresholds and criteria below describe the plan; they do not claim that tests have passed.
+This plan covers boot, the interface, external applications, and extended testing of the test LG P705. The thresholds and criteria below describe the plan; they do not claim that tests have passed.
 
 ## 1. Objective, Scope, Assumptions
 
@@ -22,7 +22,7 @@ SIM/calls (`SIM busy`), Bluetooth (`hci_smd`), GPS (`GPSNMEA`), camera, EQ
 ### 1.3. Fixed Test Setup (recheck `smoke.sh`)
 | | |
 |---|---|
-| Device | LG Optimus L7 P700 (u0), MSM7227A, 1 core 1 GHz, 400 MB |
+| Device | LG Optimus L7 P705 (u0), MSM7227A, 1 core 1 GHz, 400 MB; stock `p14` build.prop may report P700 |
 | Kernel | `3.4.0-CM #23-postmarketOS`, `msm_fb` patches 0001/0002 |
 | Display | 480×800, RGB565 16 bpp, `/dev/fb0`, panel rotated (180°) |
 | Boot | `/dev/mmcblk0p9`; current `artifacts/boot-rot.img` (MD5 `F5C3D546D214E2F5CA3857F7C0CB04E8`, 8 093 696 bytes) |

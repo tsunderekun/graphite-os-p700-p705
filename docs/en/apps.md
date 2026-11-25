@@ -538,7 +538,7 @@ modern pages will not open.”
 | Text/search | — | yes (inside) | no |
 
 **Solution:** PDF is not in v1. When needed:
-- **do not link**`libmupdf`V`graphite-shell`- the whole shell will do this
+- **do not link**`libmupdf` into `graphite-shell`- the whole shell will do this
   AGPL;
 - option A:`apphost_launch("mupdf-x11 file.pdf")`- a separate process,
   AGPL does not infect. In Alpine it is a separate binary`/usr/bin/mupdf-x11`without OpenGL (`mupdf`/`mupdf-gl`not suitable for P700);
@@ -605,7 +605,9 @@ will be needed`libxml2-dev`,`libzip-dev`,`libarchive-dev`,`hyphen-dev`(megabyte 
 
 ### 7.1. Player
 
-**MPD layer (foundation; implement first).**`r`n`r`n```
+**MPD layer (foundation; implement first).**
+
+```
 control socket — commands, 1 s timeout
 idle socket    — only idle/noidle, select(), separate backoff
 ```
@@ -689,7 +691,7 @@ struct Doc {
 - Multi-select: long-press (650 ms, shift <14 px) →`sel`-mode,
   checkboxes 24 at x=16, header “SELECTED 2”, bottom bar 56 with actions.
 - Sorting:`name/size/date/type`+`dirs_first`, store in`/etc/lgtest-settings`.
-- Security: write only in`/home/user`And`/media/sd`; on`/etc`,`/usr`,`/proc`,`/sys`- read-only with the signature “system partition”.
+- Security: write only in`/home/user` and `/media/sd`; on`/etc`,`/usr`,`/proc`,`/sys`- read-only with the signature “system partition”.
 - Limit: 2000 entries + “show more”, not the silent 500.
 
 ### 7.5. Browser
@@ -798,7 +800,7 @@ Each application must have:
 | MPD not available | "MPD unavailable" · "Retry in 3 sec" |
 | Browser without JS | “Sites without JavaScript. Many pages will not open" |
 | The file does not open | “There is no application for this file type” · “Open with...” |
-| Removal | “Delete 3 objects?” · “No cart” |
+| Removal | “Delete 3 objects?” · “No trash” |
 | Copy | "Copy 12.4 MB of 340 MB" · "Cancel" |
 | Note not saved | "Failed to save" · path |
 | Broken book | “Could not parse” · “Open as text” |
@@ -826,15 +828,16 @@ These are not “features”, but removal of blockers for all applications:
 2. **Environment for GTK.** One`dbus-daemon --session`,`XDG_RUNTIME_DIR`0700,`GTK_CSD=0`,`NO_AT_BRIDGE=1`,`XMODIFIERS=@im=none`,`LC_ALL=C.UTF-8`. Without this`pcmanfm`/`netsurf`may not open.
 3. **Back/Home Policy** for external applications: Back = keyboard →
    Alt+Left/Esc → close; Home = collapse; don't kill by Back.
-4. **The “Start...” screen** with a timeout of 15 s and “Cancel”.
+4. **The “Launching…” screen** with a timeout of 15 s and “Cancel”.
 5. **Memory:** monitor`MemAvailable`once every 5 s, maximum 2 heavy ones,`oom_score_adj`(shell −900, active 0, background +300).
 6. **OSK: terminal layer** (needed by the terminal, browser and search).
 
-### 9.2. Wave A - player P0 (2.5–3 weeks)`idle`(2–3 days) → covers (3 days) → index (5 days) → library
-(5 days) → queue and actions (2 days) → resume and status (2 days).
+### 9.2. Wave A — player P0 (2.5–3 weeks)
 
-Criteria: “turn on the album in 3 taps, see the cover, go back to pause
-from that very second."
+`idle` (2–3 days) → covers (3 days) → index (5 days) → library
+(5 days) → queue and actions (2 days) → resume and states (2 days).
+
+Criterion: “play an album in 3 taps, see its cover, and resume at the same second after pausing.”
 
 ### 9.3. Wave B – P0 files (1.5–2 weeks)
 
@@ -895,7 +898,7 @@ hyphenations, footnotes. Terminal: paste, copy.
 | Rich text / WYSIWYG in notes | breaks the file-based approach |
 | Synchronization, accounts, cloud | no network of trust and services |
 | Scrobbling, lyrics, TTS, OPDS | no network/engine, wrong device class |
-| Cart and rights to vfat | the file system does not provide |
+| Trash and permissions on vfat | the filesystem does not provide them |
 | Multitasking, Android style | 400 MB, maximum 4 tasks |
 
 ---
@@ -918,7 +921,7 @@ hyphenations, footnotes. Terminal: paste, copy.
 | 12 | JPEG/PDF decoding on the UI thread | high | stutter | background thread/cache/slices |
 | 13 | Caches on rootfs (1.1 GB) | low | disk space | limits 30/32 MB, clear in settings |
 | 14 | Reader: broken FB2/EPUB | high | "does not open" | recovery + emergency`<p>`-extractor |
-| 15 | Volume keys in reader vs player | medium | duplicate actions | ownership matrix: Volume pages in the reader |
+| 15 | Volume keys in reader vs player | medium | duplicate actions | key-ownership matrix: Volume pages in the reader |
 | 16 | `apphost` takes the first window by pid (1×1 helper) | high | app appears not to open | filter by window size/type; wait for `MapNotify` on the correct window |
 
 ---

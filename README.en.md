@@ -20,6 +20,7 @@ This is not a claim to have built a complete operating system, nor a way to turn
 ## Hardware
 
 - LG Optimus L7 P700/P705, Qualcomm MSM7227A.
+- The test unit is a **P705** (`u0`); its stock `p14` carries a P700-compatible SlimKat, so `build.prop` may report P700.
 - 480×800 display, 16-bit RGB565.
 - 512 MB RAM and 4 GB eMMC.
 - Alpine Linux / postmarketOS on the archived downstream 3.4 kernel.

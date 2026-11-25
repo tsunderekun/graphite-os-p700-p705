@@ -22,7 +22,7 @@ SIM/звонки (`SIM busy`), Bluetooth (`hci_smd`), GPS (`GPSNMEA`), каме�
 ### 1.3. Зафиксированный стенд (перепроверить `smoke.sh`)
 | | |
 |---|---|
-| Устройство | LG Optimus L7 P700 (u0), MSM7227A, 1 ядро 1 ГГц, 400 МБ |
+| Устройство | LG Optimus L7 P705 (u0), MSM7227A, 1 ядро 1 ГГц, 400 МБ |
 | Ядро | `3.4.0-CM #23-postmarketOS`, патчи `msm_fb` 0001/0002 |
 | Экран | 480×800, RGB565 16 bpp, `/dev/fb0`, панель перевёрнута (180°) |
 | Boot | `/dev/mmcblk0p9`; текущий `artifacts/boot-rot.img` (MD5 `F5C3D546D214E2F5CA3857F7C0CB04E8`, 8 093 696 Б) |

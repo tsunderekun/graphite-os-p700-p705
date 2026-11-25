@@ -18,7 +18,7 @@
 
 ## About the port and requirements
 
-The `lg-p700` port was added in 2019 and later archived. It uses LG's Linux 3.4 downstream kernel. The public port page does not confirm most components; the setup described here was verified on one P700 and is not guaranteed on every revision or P705.
+The `lg-p700` port was added in 2019 and later archived. It uses LG's Linux 3.4 downstream kernel. The public port page does not confirm most components; the setup described here was verified on one P705 (`u0`) and is not guaranteed on every revision or P700. On the test P705, the stock `p14` partition contains a P700-compatible SlimKat build, so `build.prop` may report `LG-P700`; the board is the shared `u0`, so trust the board rather than the model string.
 
 You need an LG Optimus L7 P700 (board name `u0`) or P705, about 4 GB of eMMC, an SD card, an unlocked bootloader, the V20 baseband, and a ZIP-capable recovery. The verified unit runs ClockworkMod 6.0.3.2; the upstream port mentions TWRP 3.0.2. Prepare a Linux host or Ubuntu on WSL2, `pmbootstrap`, enough disk space for sources and images, and a charged phone. The kernel requires gcc 6; builds made with newer compilers did not boot on this port.
 
