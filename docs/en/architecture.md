@@ -24,7 +24,7 @@
 - MPD is a separate service. TCP connectivity and library availability depend on device configuration; a disconnected server must not be treated as working playback.
 - `apphost` filters windows by process ownership, type, and size; it is not a full window manager. Multiple applications, retained tasks, and system notifications remain planned rather than implemented.
 - Mode selection and fallback are implemented in `os/session-shell` and related scripts. A settings item does not mean a mode change takes effect before reboot.
-- The current script starts Xorg with `-ac`. This is a development configuration with relaxed access control, not a production security model; Xauthority is required before a public release.
+- The current script starts Xorg with MIT-MAGIC-COOKIE-1: `-auth /run/graphite/Xauthority`; the cookie is regenerated per boot and the file is `0640 root:user`. `-ac` remains only as an explicit development fallback (`GRAPHITE_XAUTH=0` or missing `xauth`).
 
 ## Key files
 
@@ -52,7 +52,7 @@ For browser commands, Back may send Alt+Left; another Back within a short interv
 
 ## Out of scope for the current implementation
 
-There is no general notification model, multitasking switcher, multi-window persistence, or full Xauthority isolation in the current startup script. These features must not be inferred from the presence of settings screens or external applications.
+There is no general notification model, multitasking switcher, or multi-window persistence; MIT-cookie Xauthority is implemented but is not window isolation. These features must not be inferred from the presence of settings screens or external applications.
 
 Browser support depends on Dillo/Netsurf and their installed libraries. The `browser` screen and the external browser are separate layers: the shell manages launch, while the child X client renders page content.
 
@@ -60,5 +60,5 @@ The application API sets `W=480`, `H=800`, and a default depth of 16. The status
 
 Theme and other settings are loaded from `/etc/lgtest-settings`. Configuration writes and system-file permissions depend on the installation; this documentation does not assume every setting is available to an ordinary user.
 
-The X server runs locally on display `:0` without a TCP listener. This limits network exposure, but the `-ac` flag still disables access checks for local clients.
+The X server runs locally on display `:0` without a TCP listener. This limits network exposure; local access is checked with a cookie, and `-ac` remains a development fallback only.
 
