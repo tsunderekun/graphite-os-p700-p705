@@ -24,10 +24,10 @@ English versions live in `docs/en/`; key status information is kept in sync.
 | [themes.md](themes.md) | 7 themes, 5 accents, textures for RGB565 |
 | [settings-spec.md](settings-spec.md) | settings: 11 Android groups mapped to ours, 26 screens, 35 keys |
 | [input.md](input.md) | shared on-screen keyboard and input for our own and foreign applications |
-| [shell-chrome.md](shell-chrome.md) | notification shade, long Home, task manager |
+| [shell-chrome.md](shell-chrome.md) | design notes on the notification shade and task manager; see the status above |
 | [player.md](player.md) | player features, MPD 0.24, `idle`, `readpicture` |
-| [reader.md](reader.md) | reader as a shell screen: TXT, FB2, EPUB, pagination |
-| [apps.md](apps.md) | application and library audit, P0/P1/P2 priorities |
+| [reader.md](reader.md) | current reader formats and limitations: TXT, FB2, FB2.zip, EPUB 2/3 |
+| [apps.md](apps.md) | current behaviour of built-in apps |
 | [usb-modes.md](usb-modes.md) | USB: RNDIS, mass storage, charge-only, serial |
 | [power.md](power.md) | power, heat, suspend, behaviour without a battery |
 | [hardware.md](hardware.md) | hardware, kernel, services, known pitfalls |

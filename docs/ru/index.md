@@ -25,10 +25,10 @@
 | [themes.md](themes.md) | 7 тем, 5 акцентов, текстуры под RGB565 |
 | [settings-spec.md](settings-spec.md) | настройки: 11 групп Android → наши, 26 экранов, 35 ключей |
 | [input.md](input.md) | единая экранная клавиатура и ввод для своих и чужих приложений |
-| [shell-chrome.md](shell-chrome.md) | шторка уведомлений, long Home, менеджер задач |
+| [shell-chrome.md](shell-chrome.md) | проектные заметки о шторке уведомлений и менеджере задач; статус реализации см. выше |
 | [player.md](player.md) | функции плеера, MPD 0.24, `idle`, `readpicture` |
-| [reader.md](reader.md) | читалка как экран шелла: TXT, FB2, EPUB, пагинация |
-| [apps.md](apps.md) | аудит приложений и библиотек, приоритеты P0/P1/P2 |
+| [reader.md](reader.md) | текущие форматы и ограничения читалки: TXT, FB2, FB2.zip, EPUB 2/3 |
+| [apps.md](apps.md) | текущее поведение встроенных приложений |
 | [usb-modes.md](usb-modes.md) | USB: RNDIS, mass storage, charge-only, serial |
 | [power.md](power.md) | питание, нагрев, suspend, поведение без АКБ |
 | [hardware.md](hardware.md) | железо, ядро, сервисы, известные грабли |
