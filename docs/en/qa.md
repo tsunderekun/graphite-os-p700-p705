@@ -1,5 +1,13 @@
 # Test and Stability Plan
 
+**Status, 26 Nov 2026:** host QA `home,files,notes --strict` passed; device
+smoke, two 30-minute soaks and a **60-minute soak with two tasks** (xterm +
+dillo, 61 samples, stable boot_id, PIDs alive, zero new kernel errors, rootfs
+63.9 %) passed. PIN, Tasks, shade, EPUB 2/3 reader, photo viewer (including
+landscape for wide photos), clock/timer, backlight power policy (touch counts
+as activity), file opening and the X cookie were also checked on the P705.
+Not tested: poweroff, recovery/fastboot, a 24-hour soak.
+
 This plan covers boot, the interface, external applications, and extended testing of the test LG P705. The thresholds and criteria below describe the plan; they do not claim that tests have passed.
 
 ## 1. Objective, Scope, Assumptions

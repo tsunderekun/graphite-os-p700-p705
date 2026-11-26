@@ -214,6 +214,8 @@ struct SetAbout : ScreenView {
     void on_show() override { refresh_time(); }
 
     const char *id() const override { return "set-about"; }
+    bool scrollable() const override { return true; }
+    int content_height(int) const override { return 760; }
 
     void do_reset() {
         bool bak = copy_file("/etc/lgtest-settings", "/etc/lgtest-settings.bak");
@@ -250,6 +252,7 @@ struct SetAbout : ScreenView {
     void draw(Gfx &g) override {
         ui_bg(g);
         ui_header(g, "О телефоне", "P700 · U0", true);
+        g.begin_body(96, 760, scroll_y);
         int y = 96;
         y = ui_section(g, y, "СВЕДЕНИЯ");
         y = kv(g, y, "МОДЕЛЬ", "LG Optimus L7 P700 (u0)");
@@ -278,11 +281,13 @@ struct SetAbout : ScreenView {
                theme.dim);
         y += 24;
 
+        g.end_body();
         g.text(24, 781, "О ТЕЛЕФОНЕ · P700", 11, theme.dim);
         g.text(456, 781, "u0 · RGB565", 11, theme.dim, TF_RIGHT);
     }
 
     bool tap(int x, int y) override {
+        if (y < 96 || y >= 760) return false;
         if (hit(x, y, 0, 572, 480, 56)) {
             app.open("set-system");
             return true;

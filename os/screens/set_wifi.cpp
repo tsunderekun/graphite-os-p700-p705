@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <glob.h>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -39,19 +40,12 @@ std::string rd(const std::string &path) {
     return out;
 }
 
-bool cfg_wifi_on() {
-    const std::string v = cfg.get("wifi", "1");
-    if (v == "on") return true;
-    if (v == "off") return false;
-    return cfg.geti("wifi", 1) != 0;
-}
-
 bool wifi_iface() { return access("/sys/class/net/wlan0", F_OK) == 0; }
 
 bool wifi_is_up() {
-    if (!wifi_iface()) return cfg_wifi_on();
+    if (!wifi_iface()) return false;
     std::string f = rd("/sys/class/net/wlan0/flags");
-    if (f.empty()) return cfg_wifi_on();
+    if (f.empty()) return false;
     unsigned flags = (unsigned)std::strtoul(f.c_str(), nullptr, 0);
     return (flags & 1u) != 0;                 // IFF_UP
 }
@@ -62,26 +56,27 @@ std::string dbm_text(int dbm) {
 }
 
 std::string read_ssid() {
-    const char *paths[] = {
-        "/etc/wpa_supplicant/wpa_supplicant.conf",
-        "/etc/wpa_supplicant.conf",
-    };
-    for (const char *path : paths) {
-        FILE *f = std::fopen(path, "rb");
-        if (!f) continue;
-        char line[256];
-        while (std::fgets(line, sizeof(line), f)) {
-            char *p = std::strstr(line, "ssid=\"");
-            if (!p) continue;
-            p += 6;
-            char *q = std::strchr(p, '"');
-            if (q) *q = 0;
+    glob_t g{};
+    std::string found;
+    if (glob("/etc/wpa_supplicant*.conf", 0, nullptr, &g) == 0) {
+        for (size_t gi = 0; gi < g.gl_pathc && found.empty(); ++gi) {
+            FILE *f = std::fopen(g.gl_pathv[gi], "rb");
+            if (!f) continue;
+            char line[256];
+            while (std::fgets(line, sizeof(line), f)) {
+                char *p = std::strstr(line, "ssid=\"");
+                if (!p) continue;
+                p += 6;
+                char *q = std::strchr(p, '"');
+                if (q) *q = 0;
+                found = p;
+                break;
+            }
             std::fclose(f);
-            return p;
         }
-        std::fclose(f);
+        globfree(&g);
     }
-    return std::string();
+    return found;
 }
 
 std::string read_gateway() {
@@ -246,7 +241,7 @@ void kv(Gfx &g, int y, const char *k, const std::string &v, bool muted, bool fir
 }
 
 void save_key(const char *k, const char *v) {
-    if (!settings_save_key(k, v)) cfg.set(k, v);
+    if (!settings_save_key(k, v)) app.toast("Состояние изменено, настройка не сохранена");
 }
 
 struct Wifi : ScreenView {
@@ -265,6 +260,8 @@ struct Wifi : ScreenView {
     Wifi() { net = read_net(); }
 
     const char *id() const override { return "set-wifi"; }
+    bool scrollable() const override { return true; }
+    int content_height(int) const override { return 760; }
 
     void start_scan() {
         if (!wifi_iface()) { app.toast("Wi-Fi: wlan0 не найден"); return; }
@@ -388,6 +385,7 @@ struct Wifi : ScreenView {
     void draw(Gfx &g) override {
         ui_bg(g);
         ui_header(g, "Сеть", (std::string("WI-FI · ") + theme.code).c_str(), true);
+        g.begin_body(96, 760, scroll_y);
 
         const bool on = wifi_is_up();
         const bool linked = net.live && !net.ip.empty();
@@ -395,19 +393,21 @@ struct Wifi : ScreenView {
         if (!on) sub = "выключен";
         else if (!net.live) sub = "нет wlan0";
         else if (linked)
-            sub = (net.ssid.empty() ? std::string("подключено") : net.ssid) +
+            sub = (net.ssid.empty() ? std::string("SSID из конфигурации") :
+                   "SSID из конфигурации: " + net.ssid) +
                   (net.has_dbm ? " · " + dbm_text(net.dbm) : "");
         else sub = "включён · нет IP";
 
         srow(g, 96, "wifi", "Wi-Fi", sub, on, true);
-        kv(g, 152, "СЕТЬ", on && linked ? net.ssid : "не подключено", !(on && linked), true);
+        kv(g, 152, "СЕТЬ", on && linked ? (net.ssid.empty() ? "SSID: —" : "SSID из конфигурации") : "не подключено", !(on && linked), true);
         kv(g, 196, "IP И ШЛЮЗ",
            on && linked ? net.ip + (net.gw.empty() ? "" : " · " + net.gw) : "—",
            !(on && linked), false);
         kv(g, 240, "MAC", on ? net.mac : "—", !on, false);
 
-        bool rndis = cfg.geti("usb_net", 1) != 0;
-        srow(g, 284, "usb", "USB-сеть (RNDIS)", "172.16.42.1 · SSH с ПК", rndis, false);
+        g.hline(0, 284, g.cv.w, theme.line2);
+        g.text(24, 291, "USB-сеть (RNDIS)", 16, theme.dim);
+        g.text(24, 313, "не реализовано · gadget не переключается", 12, theme.dim);
 
         std::string status;
         if (scanning) status = "СКАН…";
@@ -425,16 +425,12 @@ struct Wifi : ScreenView {
         g.text(24, 714, "SIM · SIM busy · нет сервера EFS", 11, theme.dim);
         g.text(24, 732, "Bluetooth · HCI молчит · GPS · NMEA не идёт", 11, theme.dim);
         g.text(24, 750, "Точка доступа · AP не проверен", 11, theme.dim);
+        g.end_body();
     }
 
     bool tap(int x, int y) override {
         if (hit(x, y, 0, 32, 64, 64)) { app.back(); return true; }
         if (hit(x, y, 0, 96, 480, 56)) { toggle_wifi(); return true; }
-        if (hit(x, y, 0, 284, 480, 56)) {
-            bool on = cfg.geti("usb_net", 1) != 0;
-            save_key("usb_net", on ? "0" : "1");
-            return true;
-        }
         if (hit(x, y, 24, 376, 432, 44)) { start_scan(); return true; }
         return false;
     }

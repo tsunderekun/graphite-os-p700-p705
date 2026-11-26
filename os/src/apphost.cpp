@@ -5,6 +5,7 @@
 #include "graphite.h"
 #include "apphost.h"
 #include "osk.h"
+#include "notify.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
@@ -21,9 +22,11 @@
 #include <grp.h>
 #include <string>
 #include <sys/select.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <ctime>
 #include <unistd.h>
 
 namespace {
@@ -56,16 +59,17 @@ const unsigned kLaunchTimeout = 15000;
 const unsigned kBackWindow = 2500; // two Backs inside this window = close
 const unsigned kProbeEvery = 500;
 
-pid_t g_pid = -1;
-Window g_win = 0;
-unsigned g_launched = 0;
-bool g_closing = false;
-bool g_term_sent = false, g_kill_sent = false;
-unsigned g_close_at = 0;
-unsigned g_last_probe = 0;
-
-char g_cmd[256] = {0};
-bool g_is_browser = false;
+struct Task {
+    pid_t pid = -1, pgid = -1; Window win = 0;
+    char cmd[512] = {}; bool browser = false;
+    unsigned launched = 0, last_probe = 0, close_at = 0;
+    bool hidden = false, closing = false, term = false, kill = false;
+    bool notified = false, explicit_close = false, timeout = false;
+    unsigned episode = 0;
+};
+Task tasks[2];
+unsigned launch_episode[2] = {};
+int fg = -1;
 bool g_back_nav = false;
 unsigned g_back_at = 0;
 
@@ -75,6 +79,7 @@ pid_t g_helpers[4] = {-1, -1, -1, -1};
 int g_nhelpers = 0;
 
 int content_h() { return osk_visible() ? kKbContentH : kContentH; }
+Task *foreground() { return fg >= 0 && fg < 2 && tasks[fg].pid > 0 ? &tasks[fg] : nullptr; }
 
 // ---------------------------------------------------------------- env
 
@@ -224,6 +229,7 @@ void grab_keys(bool on) {
     KeyCode codes[] = {
         XKeysymToKeycode(app.dpy, XF86XK_Back),
         XKeysymToKeycode(app.dpy, XK_Home),
+        XKeysymToKeycode(app.dpy, XF86XK_HomePage),
         XKeysymToKeycode(app.dpy, XF86XK_PowerOff),
     };
     for (KeyCode kc : codes) {
@@ -245,25 +251,46 @@ void focus_shell() {
     app.dirty = true;
 }
 
-void cleanup() {
-    pid_t pid = g_pid;
-    bool orphan = g_win != 0;
-    g_pid = -1;
-    g_win = 0;
-    g_closing = false;
-    g_term_sent = g_kill_sent = false;
-    g_cmd[0] = 0;
-    g_is_browser = false;
-    g_back_nav = false;
+void select_other(int old) {
+    fg = -1;
+    for (int i = 0; i < 2; ++i) if (i != old && tasks[i].pid > 0 && !tasks[i].closing) { fg = i; break; }
+    if (fg >= 0 && tasks[fg].win) {
+        XMapRaised(app.dpy, tasks[fg].win);
+        XSetInputFocus(app.dpy, tasks[fg].win, RevertToPointerRoot, CurrentTime);
+        tasks[fg].hidden = false;
+    } else focus_shell();
+    app.dirty = true;
+}
+
+void cleanup(int i) {
+    Task &t = tasks[i];
+    pid_t pid = t.pid;
+    bool orphan = t.win != 0;
+    t = Task{};
+    if (fg == i) select_other(i);
     // A wrapper shell may have forked the GUI and exited: finish the group so
     // no window is left on screen with no task behind it.
     if (orphan && pid > 0) {
         if (kill(-pid, SIGTERM) != 0) kill(pid, SIGTERM);
     }
-    if (osk_visible()) osk_hide();   // g_win is already 0: resize is a no-op
-    grab_keys(false);
-    focus_shell();
-    app.dirty = true;
+    if (osk_visible()) osk_hide();
+    if (!apphost_any_task()) grab_keys(false);
+}
+
+void apphost_notify(int slot, unsigned episode, const char *kind,
+                    const char *title, const char *text, int priority) {
+    char key[32];
+    std::snprintf(key, sizeof key, "%s:%d:%u", kind, slot, episode);
+    NotifySpec spec{"apphost", key, title, text, (unsigned)std::time(nullptr), priority, false};
+    notify_push(spec);
+}
+
+void apphost_notify_launch(int slot, unsigned episode, const char *reason) {
+    char text[96];
+    const char *cmd = tasks[slot].cmd;
+    while (*cmd == ' ' || *cmd == '\t') ++cmd;
+    std::snprintf(text, sizeof text, "%.64s — %s", cmd, reason);
+    apphost_notify(slot, episode, "launch", "Не удалось запустить", text, N_HIGH);
 }
 
 void send_delete(Window w) {
@@ -283,24 +310,24 @@ void send_delete(Window w) {
 
 // The child gets its own process group, so a shell wrapper cannot leave the
 // real GUI process orphaned after SIGTERM.
-void kill_app(int sig) {
-    if (g_pid <= 0) return;
-    if (kill(-g_pid, sig) != 0) kill(g_pid, sig);
+void kill_app(Task &t, int sig) {
+    if (t.pid <= 0) return;
+    if (kill(-t.pgid, sig) != 0) kill(t.pid, sig);
 }
 
 // Alt+Left via XTest: dillo/netsurf navigate back in history like any page.
-void send_alt_left() {
-    if (!app.dpy || !g_win) return;
+void send_alt_left(Window win) {
+    if (!app.dpy || !win) return;
     KeyCode alt = XKeysymToKeycode(app.dpy, XK_Alt_L);
     KeyCode left = XKeysymToKeycode(app.dpy, XK_Left);
     if (!alt || !left) return;
-    XSetInputFocus(app.dpy, g_win, RevertToPointerRoot, CurrentTime);
+    XSetInputFocus(app.dpy, win, RevertToPointerRoot, CurrentTime);
     XTestFakeKeyEvent(app.dpy, alt, True, CurrentTime);
     XTestFakeKeyEvent(app.dpy, left, True, CurrentTime);
     XTestFakeKeyEvent(app.dpy, left, False, CurrentTime);
     XTestFakeKeyEvent(app.dpy, alt, False, CurrentTime);
     XFlush(app.dpy);
-    alog("back: Alt+Left win=0x%lx", (unsigned long)g_win);
+    alog("back: Alt+Left win=0x%lx", (unsigned long)win);
 }
 
 // ---------------------------------------------------------------- filtering
@@ -308,9 +335,9 @@ void send_alt_left() {
 // The shell owns the pid, but `/bin/sh -c <cmd>` is allowed to fork instead of
 // exec (dash and busybox ash both do). A window belongs to the task when its
 // _NET_WM_PID is the shell pid or one of its descendants.
-bool pid_is_ours(pid_t p) {
-    if (g_pid <= 0) return false;
-    if (p == g_pid) return true;
+bool pid_is_ours(Task &task, pid_t p) {
+    if (task.pid <= 0) return false;
+    if (p == task.pid) return true;
     pid_t cur = p;
     for (int depth = 0; depth < 8 && cur > 1; depth++) {
         char path[64];
@@ -325,14 +352,14 @@ bool pid_is_ours(pid_t p) {
         if (!rp) return false;
         int ppid = 0;
         if (std::sscanf(rp + 2, "%*c %d", &ppid) != 1) return false;
-        if (ppid == g_pid) return true;
+        if (ppid == task.pid) return true;
         if (ppid <= 1 || ppid == cur) return false;
         cur = ppid;
     }
     return false;
 }
 
-bool pid_matches(Window w) {
+bool pid_matches(Task &task, Window w) {
     Atom a = XInternAtom(app.dpy, "_NET_WM_PID", True);
     if (!a) return false;
     Atom type;
@@ -343,7 +370,7 @@ bool pid_matches(Window w) {
     if (XGetWindowProperty(app.dpy, w, a, 0, 1, False, XA_CARDINAL,
                            &type, &fmt, &n, &after, &data) == Success && data) {
         if (n >= 1 && fmt == 32)
-            ok = pid_is_ours((pid_t)((long *)data)[0]);
+            ok = pid_is_ours(task, (pid_t)((long *)data)[0]);
         XFree(data);
     }
     return ok;
@@ -386,8 +413,8 @@ bool is_toplevel(Window w) {
 
 // The one gate every candidate window has to pass. Helper windows (1x1, 2x2),
 // toolbars, splash screens and other processes' windows never get here.
-bool try_adopt(Window w) {
-    if (g_pid <= 0 || g_win || g_closing || !app.dpy) return false;
+bool try_adopt(Task &task, Window w) {
+    if (task.pid <= 0 || task.win || task.closing || !app.dpy) return false;
     if (w == 0 || w == app.win) return false;
 
     XWindowAttributes at;
@@ -397,11 +424,13 @@ bool try_adopt(Window w) {
     if (at.width < 200 || at.height < 150) return false;
     if (!is_toplevel(w)) return false;
     if (!window_type_ok(w)) return false;
-    if (!pid_matches(w)) return false;
+    if (!pid_matches(task, w)) return false;
 
-    g_win = w;
+    task.win = w;
+    task.hidden = false;
     alog("adopt win=0x%lx %dx%d", (unsigned long)w, at.width, at.height);
     XMoveResizeWindow(app.dpy, w, 0, kTop, app.W, content_h());
+    if (fg >= 0 && &tasks[fg] != &task) { XUnmapWindow(app.dpy, w); task.hidden = true; return true; }
     XRaiseWindow(app.dpy, w);
     XSync(app.dpy, False);
     XSetInputFocus(app.dpy, w, RevertToPointerRoot, CurrentTime);
@@ -412,15 +441,15 @@ bool try_adopt(Window w) {
 
 // Late helper resize (a client mapping 1x1 and then asking for its real size)
 // and windows mapped before the shell saw MapNotify: walk root children.
-void probe_windows() {
-    if (!app.dpy || g_win) return;
+void probe_windows(Task &task) {
+    if (!app.dpy || task.win) return;
     Window root_ret = 0, parent = 0, *kids = nullptr;
     unsigned n = 0;
     Window root = DefaultRootWindow(app.dpy);
     if (!XQueryTree(app.dpy, root, &root_ret, &parent, &kids, &n)) return;
-    for (unsigned i = 0; i < n && !g_win; i++) {
+    for (unsigned i = 0; i < n && !task.win; i++) {
         if (kids[i] == app.win) continue;
-        try_adopt(kids[i]);
+        try_adopt(task, kids[i]);
     }
     if (kids) XFree(kids);
 }
@@ -431,24 +460,45 @@ void probe_windows() {
 
 bool apphost_launch(const char *command) {
     if (!app.dpy || !command || !*command) return false;
-    if (g_pid > 0) { app.toast("Уже открыто приложение"); return false; }
+    for (int i = 0; i < 2; ++i) if (tasks[i].pid > 0 && !std::strcmp(tasks[i].cmd, command)) return apphost_resume_task(i);
+    int slot = tasks[0].pid <= 0 ? 0 : tasks[1].pid <= 0 ? 1 : -1;
+    if (slot < 0) { app.toast("Две задачи уже открыты"); return false; }
+    FILE *mf = std::fopen("/proc/meminfo", "r");
+    if (mf) { unsigned long free_kb=0, buffers=0, cached=0; char line[256]; while (std::fgets(line,sizeof line,mf)) { if (std::sscanf(line,"MemFree: %lu",&free_kb)==1) continue; if (std::sscanf(line,"Buffers: %lu",&buffers)==1) continue; if (std::sscanf(line,"Cached: %lu",&cached)==1) continue; } std::fclose(mf); if (geteuid()==0 && free_kb+buffers+cached < 50UL*1024) { app.toast("Недостаточно памяти"); return false; } }
 
     ensure_runtime_dir();
     start_dbus_session();
-    std::snprintf(g_cmd, sizeof g_cmd, "%s", command);
-    g_is_browser = is_browser_command(command);
+    Task &t = tasks[slot];
+    t = Task{};
+    std::snprintf(t.cmd, sizeof t.cmd, "%s", command);
+    t.episode = launch_episode[slot] + 1;
+    t.browser = is_browser_command(command);
     g_back_nav = false;
 
     pid_t pid = fork();
-    if (pid < 0) { app.toast("Не удалось запустить"); return false; }
+    if (pid < 0) { apphost_notify_launch(slot, t.episode, "ошибка fork"); app.toast("Не удалось запустить"); t = Task{}; return false; }
     if (pid == 0) {
         setpgid(0, 0);
         setgroups(0, nullptr);
+        // Validate the authority while still privileged; the resulting path is
+        // inherited by the uid-10000 GUI client. An unset value keeps Xvfb
+        // host previews working without authentication.
+        const char *xauth = std::getenv("XAUTHORITY");
+        if (xauth && *xauth) {
+            int authfd = open(xauth, O_RDONLY | O_CLOEXEC);
+            struct stat authst;
+            if (authfd < 0 || fstat(authfd, &authst) != 0 || !S_ISREG(authst.st_mode)) {
+                if (authfd >= 0) close(authfd);
+                _exit(126);
+            }
+            close(authfd);
+        }
         if (setgid(kGid) != 0) { /* host preview: keep the current gid */ }
         if (setuid(kUid) != 0) { /* host preview: dillo will not start */ }
 
         const char *disp = DisplayString(app.dpy);
         setenv("DISPLAY", disp && *disp ? disp : ":0", 1);
+        if (xauth && *xauth) setenv("XAUTHORITY", xauth, 1);
         setenv("HOME", "/home/user", 1);
         setenv("USER", "user", 1);
         setenv("LOGNAME", "user", 1);
@@ -466,123 +516,190 @@ bool apphost_launch(const char *command) {
         _exit(127);
     }
 
-    g_pid = pid;
+    launch_episode[slot] = t.episode;
+    t.pid = pid; t.pgid = pid;
     setpgid(pid, pid);   // race-free: the child does this too
-    g_win = 0;
-    g_launched = app.now;
-    g_last_probe = app.now;
-    g_closing = false;
-    g_term_sent = g_kill_sent = false;
+    t.launched = app.now; t.last_probe = app.now; t.win = 0; t.closing = false;
+    for (int i=0;i<2;i++) if(i!=slot && tasks[i].win) { XUnmapWindow(app.dpy,tasks[i].win); tasks[i].hidden=true; }
+    fg = slot;
     XSetErrorHandler(on_xerror);
-    alog("launch pid=%d cmd='%s'", (int)pid, g_cmd);
+    alog("launch pid=%d cmd='%s'", (int)pid, t.cmd);
     grab_keys(true);
     app.dirty = true;
     return true;
 }
 
-bool apphost_active() { return g_pid > 0; }
+bool apphost_active() { return foreground() != nullptr; }
+bool apphost_any_task() { return tasks[0].pid > 0 || tasks[1].pid > 0; }
 
-bool apphost_has_window() { return g_win != 0; }
+int apphost_task_count() { return (tasks[0].pid > 0) + (tasks[1].pid > 0); }
 
-bool apphost_launching() {
-    if (g_pid <= 0 || g_win || g_closing) return false;
-    return app.now - g_launched <= kLaunchTimeout;
+bool apphost_task_info(int index, char *title, unsigned title_size,
+                       char *command, unsigned command_size,
+                       bool *foreground, bool *closing) {
+    if (index < 0 || index >= 2 || tasks[index].pid <= 0) return false;
+    Task &t=tasks[index];
+    // A friendly label first, the raw command as the second line: "-g 480x768"
+    // is not something to show as an app name.
+    const char *label = t.cmd;
+    if (std::strstr(t.cmd, "dillo")) label = "Браузер · dillo";
+    else if (std::strstr(t.cmd, "netsurf")) label = "Браузер · netsurf";
+    else if (std::strstr(t.cmd, "xterm")) label = "Терминал · xterm";
+    if (title && title_size) std::snprintf(title, title_size, "%s", label);
+    if (command && command_size) std::snprintf(command, command_size, "%s", t.cmd);
+    if (foreground) *foreground = index == fg;
+    if (closing) *closing = t.closing;
+    return true;
 }
 
-const char *apphost_command() { return g_cmd; }
+bool apphost_close_task(int index) {
+    if (index < 0 || index >= 2 || tasks[index].pid <= 0) return false;
+    Task &t=tasks[index]; t.closing=true; t.explicit_close=true; t.close_at=app.now; t.term=t.kill=false;
+    if (t.win) send_delete(t.win);
+    if (fg==index) select_other(index);
+    app.dirty=true; return true;
+}
 
-bool apphost_is_browser() { return g_pid > 0 && g_is_browser; }
+bool apphost_has_window() { Task *t=foreground(); return t && t->win; }
+
+bool apphost_window_visible() {
+    Task *t=foreground(); if (!t || !t->win || !app.dpy) return false;
+    XWindowAttributes at;
+    return XGetWindowAttributes(app.dpy, t->win, &at) && at.map_state == IsViewable;
+}
+
+bool apphost_launching() {
+    Task *t=foreground(); if (!t || t->win || t->closing) return false;
+    return app.now - t->launched <= kLaunchTimeout;
+}
+
+const char *apphost_command() { Task *t=foreground(); return t ? t->cmd : ""; }
+
+bool apphost_is_browser() { Task *t=foreground(); return t && t->browser; }
 
 // Back policy: a browser gets one Alt+Left. A second Back within a couple of
 // seconds falls through to apphost_close(), which the caller does.
 bool apphost_back() {
-    if (g_pid <= 0 || !g_is_browser || !g_win) return false;
+    Task *t=foreground(); if (!t || !t->browser || !t->win) return false;
     if (g_back_nav && app.now - g_back_at <= kBackWindow) {
         g_back_nav = false;
         return false;
     }
-    send_alt_left();
+    send_alt_left(t->win);
     g_back_nav = true;
     g_back_at = app.now;
     return true;
 }
 
 void apphost_note_key(int ksym, bool down) {
-    alog("key ks=0x%x %s active=%d", ksym, down ? "down" : "up", g_pid > 0 ? 1 : 0);
+    alog("key ks=0x%x %s active=%d", ksym, down ? "down" : "up", apphost_active() ? 1 : 0);
 }
 
 bool apphost_on_map(unsigned long window) {
-    if (g_pid <= 0 || g_win || !app.dpy) return false;
-    return try_adopt((Window)window);
+    if (!app.dpy) return false;
+    for (int i=0;i<2;i++) if (tasks[i].pid>0 && !tasks[i].win && try_adopt(tasks[i],(Window)window)) return true;
+    return false;
 }
 
 void apphost_on_destroy(unsigned long window) {
-    if (!g_win || (Window)window != g_win) return;
-    g_win = 0;
-    focus_shell();
-    if (!g_closing) {
-        g_closing = true;
-        g_close_at = app.now;
-    }
-    app.dirty = true;
+    for (int i=0;i<2;i++) if (tasks[i].win==(Window)window) { tasks[i].win=0; tasks[i].hidden=true; if (fg==i) select_other(i); }
+}
+
+void apphost_on_unmap(unsigned long window) {
+    for (int i=0;i<2;i++) if (tasks[i].win==(Window)window) { tasks[i].hidden=true; if (fg==i) { focus_shell(); app.dirty=true; } }
 }
 
 void apphost_set_content_height(int h) {
-    if (g_win && app.dpy)
-        XMoveResizeWindow(app.dpy, g_win, 0, kTop, app.W, h);
+    Task *t=foreground(); if (t && t->win && app.dpy) XMoveResizeWindow(app.dpy,t->win,0,kTop,app.W,h);
 }
 
 void apphost_focus_app() {
-    if (g_win && app.dpy) {
-        XRaiseWindow(app.dpy, g_win);
-        XSetInputFocus(app.dpy, g_win, RevertToPointerRoot, CurrentTime);
-        XFlush(app.dpy);
-    }
+    apphost_resume();
 }
 
+bool apphost_suspend() {
+    Task *t=foreground(); if (!t || !t->win || !app.dpy) return false;
+    if (osk_visible()) osk_hide();
+    XWindowAttributes at;
+    if (!XGetWindowAttributes(app.dpy, t->win, &at)) {
+        t->win = 0;
+        t->hidden = true;
+        focus_shell();
+        app.dirty = true;
+        return false;
+    }
+    XUnmapWindow(app.dpy, t->win);
+    XFlush(app.dpy);
+    t->hidden = true;
+    focus_shell();
+    app.dirty = true;
+    return true;
+}
+
+bool apphost_resume_task(int i) {
+    if (i<0 || i>=2 || tasks[i].pid<=0 || !tasks[i].win || !app.dpy || tasks[i].closing) return false;
+    Task &t=tasks[i];
+    XWindowAttributes at;
+    if (!XGetWindowAttributes(app.dpy, t.win, &at)) {
+        // The client disappeared without a DestroyNotify we observed (or the
+        // XID went stale). Never issue map/focus requests against it again.
+        t.win = 0;
+        t.hidden = true;
+        focus_shell();
+        app.dirty = true;
+        return false;
+    }
+    for(int j=0;j<2;j++) if(j!=i && tasks[j].win) { XUnmapWindow(app.dpy,tasks[j].win); tasks[j].hidden=true; }
+    fg=i;
+    XMapRaised(app.dpy, t.win);
+    XMoveResizeWindow(app.dpy, t.win, 0, kTop, app.W, content_h());
+    XSync(app.dpy, False);
+    XSetInputFocus(app.dpy, t.win, RevertToPointerRoot, CurrentTime);
+    XFlush(app.dpy);
+    t.hidden = false;
+    app.dirty = true;
+    return true;
+}
+
+bool apphost_resume() { return fg>=0 && apphost_resume_task(fg); }
+
 void apphost_close() {
-    if (g_pid <= 0) return;
-    alog("close pid=%d win=0x%lx", (int)g_pid, (unsigned long)g_win);
-    g_closing = true;
-    g_close_at = app.now;
+    Task *t=foreground(); if (!t) return;
+    alog("close pid=%d win=0x%lx", (int)t->pid, (unsigned long)t->win);
+    t->closing = true;
+    t->explicit_close = true;
+    t->close_at = app.now;
     g_back_nav = false;
-    if (g_win) send_delete(g_win);
+    if (t->win) send_delete(t->win);
+    if (fg >= 0) select_other(fg);
     app.dirty = true;   // drop the launch overlay / clearing state at once
 }
 
 void apphost_tick(unsigned now) {
     reap_helpers();
-    if (g_pid <= 0) return;
-
-    int st = 0;
-    pid_t r = waitpid(g_pid, &st, WNOHANG);
-    if (r == g_pid) { alog("exited pid=%d st=%d", (int)g_pid, st); cleanup(); return; }
-
-    // Keep looking for a suitable window: the first MapNotify is often a
-    // 1x1 helper, and some clients only get their real size in a later
-    // ConfigureNotify.
-    if (!g_win && !g_closing && now - g_launched < kLaunchTimeout &&
-        now - g_last_probe >= kProbeEvery) {
-        g_last_probe = now;
-        probe_windows();
-    }
-
-    if (!g_win && now - g_launched > kLaunchTimeout && !g_closing) {
-        app.toast("Приложение не открылось");
-        g_closing = true;
-        g_close_at = now;
-    }
-
-    if (g_closing) {
-        if (!g_term_sent && now - g_close_at > 800) {
-            g_term_sent = true;
-            alog("SIGTERM pid=%d", (int)g_pid);
-            kill_app(SIGTERM);
+    for(int i=0;i<2;i++) { Task &t=tasks[i]; if(t.pid<=0) continue;
+        int st=0; pid_t r=waitpid(t.pid,&st,WNOHANG); if(r==t.pid || (r<0 && errno==ECHILD)) {
+            alog("exited pid=%d st=%d",(int)t.pid,st);
+            if (r == t.pid && !t.notified && !t.explicit_close && !t.timeout) {
+                if (WIFEXITED(st) && (WEXITSTATUS(st) == 126 || WEXITSTATUS(st) == 127)) {
+                    char reason[48]; std::snprintf(reason, sizeof reason, "завершился с кодом %d", WEXITSTATUS(st));
+                    apphost_notify_launch(i, t.episode, reason); t.notified = true;
+                } else if ((WIFEXITED(st) && WEXITSTATUS(st) != 0) || WIFSIGNALED(st)) {
+                    bool was_foreground = fg == i && !t.hidden;
+                    if (!was_foreground) {
+                        char text[64];
+                        if (WIFSIGNALED(st)) std::snprintf(text, sizeof text, "убит сигналом %d", WTERMSIG(st));
+                        else std::snprintf(text, sizeof text, "завершился с кодом %d", WEXITSTATUS(st));
+                        apphost_notify(i, t.episode, "exit", "Задача завершилась", text, N_NORMAL);
+                        t.notified = true;
+                    }
+                }
+            }
+            cleanup(i); continue;
         }
-        if (!g_kill_sent && now - g_close_at > 2500) {
-            g_kill_sent = true;
-            alog("SIGKILL pid=%d", (int)g_pid);
-            kill_app(SIGKILL);
-        }
+        if(!t.win && !t.closing && now-t.launched<kLaunchTimeout && now-t.last_probe>=kProbeEvery) { t.last_probe=now; probe_windows(t); }
+        if(!t.win && now-t.launched>kLaunchTimeout && !t.closing) { if (!t.notified) { apphost_notify(i, t.episode, "launch", "Не удалось запустить", "нет окна за 15 с", N_HIGH); t.notified=true; } t.timeout=true; if(fg==i) app.toast("Приложение не открылось"); t.closing=true; t.close_at=now; }
+        if(t.closing && !t.term && now-t.close_at>800) { t.term=true; kill_app(t,SIGTERM); }
+        if(t.closing && !t.kill && now-t.close_at>2500) { t.kill=true; kill_app(t,SIGKILL); }
     }
 }

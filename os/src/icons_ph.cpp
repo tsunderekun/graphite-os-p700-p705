@@ -73,12 +73,18 @@ bool icon_ph(Gfx &g, const char *name, int x, int y, int size, uint16_t color) {
     if (size > kMaxPx) size = kMaxPx;
 
     Canvas &cv = g.cv;
+    bool body = !(g.clip_bottom <= g.clip_top || y + size <= g.clip_top || y >= g.clip_bottom);
+    if (body) y += g.offset_y;
     if (x >= cv.w || y >= cv.h || x + size <= 0 || y + size <= 0) return true;
 
     const float s = (float)size / 24.0f;
     int ry0 = 0, ry1 = size;
     if (y < 0) ry0 = -y;
     if (y + size > cv.h) ry1 = cv.h - y;
+    if (body) {
+        if (g.clip_top > y && ry0 < g.clip_top - y) ry0 = g.clip_top - y;
+        if (g.clip_bottom < y + ry1) ry1 = g.clip_bottom - y;
+    }
     int cx0 = 0, cx1 = size;
     if (x < 0) cx0 = -x;
     if (x + size > cv.w) cx1 = cv.w - x;

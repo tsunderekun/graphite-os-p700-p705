@@ -1,5 +1,12 @@
 # READER-V2 — reader as a graphite shell screen
 
+> **Status, 26 Nov 2026:** Reader is implemented. EPUB 2/3, OPF/spine and TOCs
+> from EPUB 3 nav or EPUB 2 NCX are supported, including nesting and `#fragment`
+> targets, with headings/spine fallback. DRM/encryption, CSS and book images are
+> unsupported. EPUB host tests: 8 PASS; EPUB 2 and 3 books were checked on the
+> P705. The remaining design material below is not a promise that every proposed
+> mode is implemented.
+
 > Public project plan. Estimates and performance figures are targets pending
 > confirmation on the device. This document contains no personal environment data.
 

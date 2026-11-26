@@ -4,7 +4,7 @@
 #   sh os/preview.sh home            -> artifacts/host/home.png  (display :99)
 #   sh os/preview.sh home :93        -> second agent's own display
 #
-# Run inside WSL:  wsl -e bash -lc "cd /mnt/c/path/to/repo && sh os/preview.sh home"
+# Run inside WSL:  wsl -e bash -lc "cd /path/to/repo && sh os/preview.sh home"
 set -e
 cd "$(dirname "$0")"
 NAME=${1:-screen}
@@ -20,7 +20,7 @@ if [ ! -S "/tmp/.X11-unix/X$N" ]; then
     sleep 1
 fi
 
-GRAPHITE_FONTS=${GRAPHITE_FONTS:-../shell/fonts} \
+GRAPHITE_FONTS=${GRAPHITE_FONTS:-/path/to/repo/shell/fonts} \
 GRAPHITE_SCREEN=${GRAPHITE_SCREEN:-home} \
 DISPLAY=$DISP ./build/graphite-host >/tmp/graphite-$N.log 2>&1 &
 PID=$!

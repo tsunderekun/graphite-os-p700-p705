@@ -461,7 +461,7 @@ void osk_hide() {
 }
 
 void osk_toggle() {
-    if (!apphost_active()) {
+    if (!apphost_window_visible()) {
         app.toast("Клавиатура только для внешних приложений");
         return;
     }
@@ -487,7 +487,10 @@ bool osk_event(XEvent &ev) {
     if (ev.type == ButtonRelease) {
         int x = ev.xbutton.x, y = ev.xbutton.y;
         for (const Key &k : keys)
-            if (x >= k.x && x < k.x + k.w && y >= k.y && y < k.y + k.h) {
+            // Expand only the hit rectangle into half of each 4 px gutter;
+            // adjacent rectangles meet at a shared boundary without overlap.
+            if (x >= k.x - GAP / 2 && x < k.x + k.w + (GAP - GAP / 2) &&
+                y >= k.y && y < k.y + k.h) {
                 press(k);
                 break;
             }

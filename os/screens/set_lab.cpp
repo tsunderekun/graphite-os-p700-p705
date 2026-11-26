@@ -174,7 +174,7 @@ struct SetLab : ScreenView {
         net = st.empty() ? "wlan0 · нет" : "wlan0 · " + st;
 
         if (dir_ok("/home/user/notes/qa") || dir_ok("../notes/qa") ||
-            dir_ok("./notes/qa") || dir_ok("notes/qa"))
+            dir_ok("/path/to/repo/notes/qa") || dir_ok("notes/qa"))
             qa = "notes/qa · smoke · burn-in";
         else
             qa = "на устройстве нет · по SSH";
@@ -184,38 +184,33 @@ struct SetLab : ScreenView {
     }
 
     const char *id() const override { return "set-lab"; }
+    bool scrollable() const override { return true; }
+    int content_height(int) const override { return 720; }
 
     void draw(Gfx &g) override {
         ui_bg(g);
         ui_header(g, "Лаборатория",
                   ("ДИАГНОСТИКА · " + std::string(theme.code)).c_str(), true);
+        g.begin_body(96, 760, scroll_y);
         int y = 96;
         y = ui_section(g, y, "РАЗДЕЛЫ");
         y = row(g, y, "Экран и pan", fb, false);
         y = row(g, y, "Звук и MPD", mpd, false);
         y = row(g, y, "Питание", power, false);
         y = row(g, y, "Сеть", net, false);
-        y = row(g, y, "Датчики", "i2c · sysfs · accel/light/vibro", false);
         y = row(g, y, "Логи", "/var/log · dmesg · открыть в Файлах", true);
-        y = row(g, y, "QA-скрипты", qa, false);
-
-        y = ui_section(g, y, "ОПАСНОЕ");
-        y = kv(g, y, "SUSPEND", "только по SSH · нет wakeup", true);
-        y = kv(g, y, "RMT_STORAGE", "только по SSH · фазы 1–2", true);
-
-        g.text(24, y + 6, "диагностика только читает · действия — по SSH", 11,
-               theme.dim);
-        y += 24;
 
         y = ui_section(g, y, "СОСТОЯНИЕ");
         y = kv(g, y, "UPTIME", uptime.c_str());
         y = kv(g, y, "LOADAVG", load.c_str());
 
+        g.end_body();
         g.text(24, 781, "ЛАБОРАТОРИЯ · /var/log", 11, theme.dim);
         g.text(456, 781, "smoke по SSH", 11, theme.dim, TF_RIGHT);
     }
 
     bool tap(int x, int y) override {
+        if (y < 96 || y >= 760) return false;
         if (hit(x, y, 0, row0 + 5 * 56, 480, 56)) {
             app.open_path = "/var/log";
             app.open("files");

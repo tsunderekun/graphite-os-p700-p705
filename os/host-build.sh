@@ -10,6 +10,6 @@ flock 9
 
 CXX=${CXX:-g++}
 $CXX -O1 -std=c++17 -Wall -Wextra -Iinclude -Iscreens \
-    -I/usr/include/freetype2 -o build/graphite-host \
-    src/*.cpp screens/*.cpp -lX11 -lXtst -lfreetype
+    -I/usr/include/freetype2 -I/usr/include/libxml2 -o build/graphite-host \
+    src/*.cpp screens/*.cpp -lX11 -lXtst -lXext -lfreetype -lxml2 -lzip
 echo "ok: build/graphite-host"

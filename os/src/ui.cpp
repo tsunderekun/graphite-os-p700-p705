@@ -1,6 +1,7 @@
 #include "graphite.h"
 #include "apphost.h"
 #include "osk.h"
+#include "notify.h"
 #include <ctime>
 #include <cstdio>
 #include <cstring>
@@ -98,6 +99,14 @@ static void status_read() {
 }
 
 void ui_status(Gfx &g) {
+    // Status bar uses fixed 18 px slots (8 px gap), centered on y=16.
+    // Right edge is x=464 (16 px margin); optional indicators never reflow.
+    constexpr int kStatusY = 7;
+    constexpr int kWifiX = 446;
+    constexpr int kHeadphonesX = 420;
+    constexpr int kUsbX = 394;
+    constexpr int kBatteryX = 326;
+    constexpr int kBatteryTextRight = 384;
     char t[16];
     time_t now = time(nullptr);
     struct tm tmv;
@@ -105,39 +114,36 @@ void ui_status(Gfx &g) {
     std::snprintf(t, sizeof(t), "%02d:%02d", tmv.tm_hour, tmv.tm_min);
     g.text(16, 8, t, 12, theme.fg);
 
+    const int unread = notify_unread();
+    if (unread > 0) {
+        uint16_t c = notify_dnd() ? theme.dim : theme.accent;
+        g.cv.disc(72, 16, 7, c);
+        char badge[8];
+        std::snprintf(badge, sizeof(badge), "%d", unread > 99 ? 99 : unread);
+        g.text(86, 10, badge, 11, c);
+    }
+
     status_read();
-    if (apphost_active())
-        icon(g, "keyboard", 296, 7, 18,
+    if (apphost_window_visible())
+        icon(g, "keyboard", 296, kStatusY, 18,
              osk_visible() ? theme.accent : theme.dim);
-    int x = 460;
 
     if (sc.present && sc.cap >= 0) {
         char pct[12];
         std::snprintf(pct, sizeof(pct), "%d%%", sc.cap);
         uint16_t pc = sc.charging ? theme.accent : theme.fg;
-        g.text(x, 9, pct, 12, pc, TF_RIGHT);
-        int tw = g.textw(pct, 12);
-        int bx = x - tw - 26;
-        g.frame(bx, 9, 22, 11, theme.fg);
-        g.rect(bx + 22, 12, 2, 4, theme.fg);
-        int fill = 18 * (sc.cap < 0 ? 0 : (sc.cap > 100 ? 100 : sc.cap)) / 100;
-        if (fill > 0) g.rect(bx + 2, 11, fill, 7, pc);
-        x = bx - 10;
+        g.text(kBatteryTextRight, 10, pct, 12, pc, TF_RIGHT);
+        g.frame(kBatteryX, 11, 16, 10, theme.fg);
+        g.rect(kBatteryX + 16, 14, 2, 4, theme.fg);
+        int fill = 12 * (sc.cap < 0 ? 0 : (sc.cap > 100 ? 100 : sc.cap)) / 100;
+        if (fill > 0) g.rect(kBatteryX + 2, 13, fill, 6, pc);
     } else if (sc.usb) {
-        int uw = g.textw("USB", 11);
-        g.text(x, 9, "USB", 11, theme.dim, TF_RIGHT);
-        x -= uw + 6;
+        g.text(kBatteryTextRight, 10, "USB", 11, theme.dim, TF_RIGHT);
     }
 
-    if (sc.usb) {
-        icon(g, "usb", x - 14, 9, 14, theme.dim);
-        x -= 22;
-    }
-    if (sc.h2w) {
-        icon(g, "headphones", x - 18, 8, 18, theme.fg);
-        x -= 24;
-    }
-    icon(g, "wifi", x - 16, 9, 16, sc.wifi ? theme.fg : theme.dim);
+    if (sc.usb) icon(g, "usb", kUsbX, kStatusY, 18, theme.dim);
+    if (sc.h2w) icon(g, "headphones", kHeadphonesX, kStatusY, 18, theme.fg);
+    icon(g, "wifi", kWifiX, kStatusY, 18, sc.wifi ? theme.fg : theme.dim);
 }
 
 // ── layout constants (see notes/shell/DESIGN-SYSTEM.md) ────────────────
@@ -166,8 +172,11 @@ void ui_caps(Gfx &g, int x, int y, const std::string &s, int px, uint16_t c,
     }
 }
 
+bool ui_header_back = false;
+
 int ui_header(Gfx &g, const char *title, const char *sub, bool back) {
     const int top = 32;
+    ui_header_back = back;
     if (back) {
         // 44 × 44 tap zone at x = 4…48, icon centred inside it.
         int by = top + (kHeaderH - 44) / 2;
@@ -196,11 +205,15 @@ int ui_row(Gfx &g, int y, const char *name, const char *sub,
            const char *value, bool chevron, bool accent) {
     g.hline(0, y, g.cv.w, theme.line2);
     uint16_t nc = accent ? theme.accent : theme.fg;
-    std::string nm = g.fit(name ? name : "", 16, 300);
+    const bool has_value = value && *value;
+    int name_width = chevron ? (has_value ? 196 : 220)
+                             : (has_value ? 220 : 300);
+    std::string nm = g.fit(name ? name : "", 16, name_width);
     g.text(kPadX, y + 7, nm, 16, nc);
     if (sub && *sub) g.text(kPadX, y + 29, g.fit(sub, 12, 330), 12, theme.dim);
-    if (value && *value)
-        g.text(kRight, y + 19, g.fit(value, 12, 190), 12, theme.dim, TF_RIGHT);
+    if (has_value)
+        g.text(chevron ? kRight - 24 : kRight, y + 19,
+               g.fit(value, 12, chevron ? 166 : 190), 12, theme.dim, TF_RIGHT);
     if (chevron) icon(g, "chevron", kRight - 18, y + 20, 16, theme.dim);
     return y + 56;
 }
@@ -245,7 +258,7 @@ void ui_chevron(Gfx &g, int x, int y, uint16_t c) {
 
 void ui_toast(Gfx &g, const char *text) {
     if (!text || !*text) return;
-    int y = 36;   // just under the status bar: never covers keyboards or action bars
+    int y = 96;   // below the screen header; transiently overlays content
     g.rect(kPadX, y, kContentW, 48, theme.surf);
     g.rect(kPadX, y, 3, 48, theme.accent);
     g.text(kPadX + 16, y + 15, g.fit(text, 13, kContentW - 32), 13, theme.fg);

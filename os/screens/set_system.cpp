@@ -112,7 +112,7 @@ int kv(Gfx &g, int y, const char *key, const std::string &val, bool muted = fals
     g.hline(0, y, g.cv.w, theme.line2);
     g.text(24, y + 8, g.fit(key, 12, 150), 12, theme.dim);
     g.text(184, y + 5, g.fit(val, 16, 272), 16, muted ? theme.dim : theme.fg);
-    return y + 44;
+    return y + 56;
 }
 
 int button(Gfx &g, int y, const char *label) {
@@ -250,11 +250,14 @@ struct SetSystem : ScreenView {
     bool animated() const override { return sync == 1; }
 
     const char *id() const override { return "set-system"; }
+    bool scrollable() const override { return true; }
+    int content_height(int) const override { return 790; }
 
     void draw(Gfx &g) override {
         ui_bg(g);
         ui_header(g, "Время и дата", ("СИСТЕМА · " + std::string(theme.code)).c_str(),
                   true);
+        g.begin_body(96, 760, scroll_y);
 
         g.rect(24, 104, 432, 96, theme.surf);
         g.text(40, 112, clock, 40, theme.fg, TF_LIGHT);
@@ -265,26 +268,28 @@ struct SetSystem : ScreenView {
         std::string tzv = tz + " · " + off;
         y = kv(g, y, "ЧАСОВОЙ ПОЯС", tzv);
         y = kv(g, y, "NTP СТАТУС", sync_msg, sync != 2);
-        y = button(g, y + 8, sync == 1 ? "СИНХРОНИЗАЦИЯ…" : "СИНХРОНИЗИРОВАТЬ");
+        const int sync_button_y = y + 8;
+        y = button(g, sync_button_y, sync == 1 ? "СИНХРОНИЗАЦИЯ…" : "СИНХРОНИЗИРОВАТЬ");
         y = note(g, y, "ntpd -q -p pool.ntp.org · лог /tmp/ntp.log");
 
         y = ui_section(g, y, "ФОРМАТ");
         y = kv(g, y, "ФОРМАТ", "24 ч · DD.MM.YYYY");
         y = kv(g, y, "СЕГОДНЯ", human);
-        y = kv(g, y, "RTC", rtc ? "/dev/rtc0 · есть" : "/dev/rtc0 · нет");
-        y = kv(g, y, "ПРИ ЗАГРУЗКЕ", "RTC, time.start");
+        y = kv(g, y, "RTC",
+               (rtc ? "/dev/rtc0 · есть" : "/dev/rtc0 · нет") +
+                   std::string(" · time.start"));
 
         y = ui_section(g, y, "СОСТОЯНИЕ");
-        y = kv(g, y, "UPTIME", uptime_text());
-        y = kv(g, y, "LOADAVG", load_text());
+        y = kv(g, y, "UPTIME · LOAD", uptime_text() + " · " + load_text());
         y = note(g, y, "NTP не подтверждён — время из RTC");
 
+        g.end_body();
         g.text(24, 781, "СИСТЕМА · RTC /dev/rtc0", 11, theme.dim);
         g.text(456, 781, (tz + " · " + off).c_str(), 11, theme.dim, TF_RIGHT);
     }
 
     bool tap(int x, int y) override {
-        if (hit(x, y, 24, 332, 432, 48)) {
+        if (hit(x, y, 24, 356, 432, 48)) {
             start_sync();
             return true;
         }

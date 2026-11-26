@@ -8,19 +8,64 @@ LOG=/var/log/graphite-session.log
 } >>"$LOG" 2>&1
 
 /usr/local/bin/fbset16 16 || exec /usr/local/bin/lp7player
-echo 200 > /sys/class/leds/lcd-backlight/brightness 2>/dev/null
-echo 255 > /sys/class/leds/button-backlight/brightness 2>/dev/null
+BRIGHTNESS=$(sed -n 's/^brightness=\([0-9][0-9]*\)$/\1/p' /etc/lgtest-settings 2>/dev/null | head -n 1)
+case "$BRIGHTNESS" in ''|*[!0-9]*) BRIGHTNESS=150 ;; esac
+[ "$BRIGHTNESS" -le 255 ] || BRIGHTNESS=255
+echo "$BRIGHTNESS" > /sys/class/leds/lcd-backlight/brightness 2>/dev/null
 
 # clean leftovers from a previous session
 killall graphite-shell 2>/dev/null
 killall fbpan-ng 2>/dev/null
+killall fbdmg 2>/dev/null
 if ! pidof Xorg >/dev/null; then
     rm -f /tmp/.X0-lock /tmp/.X11-unix/X0
 fi
 sleep 0.5
 
+# GRAPHITE_XAUTH=0 is an explicit development escape hatch. If xauth is not
+# installed, retain the legacy behavior so development/host setups still boot.
+AUTH=/run/graphite/Xauthority
+XAUTH_MODE=auth
+if [ "${GRAPHITE_XAUTH:-1}" = 0 ]; then
+    XAUTH_MODE=legacy
+    echo "WARNING: GRAPHITE_XAUTH=0; starting X without access control (-ac)" >>"$LOG"
+elif ! command -v xauth >/dev/null 2>&1; then
+    XAUTH_MODE=legacy
+    echo "WARNING: xauth missing; starting X without access control (-ac)" >>"$LOG"
+else
+    OLDUMASK=$(umask)
+    umask 077
+    if ! mkdir -p /run/graphite || ! chown root:10000 /run/graphite ||
+       ! chmod 0750 /run/graphite; then
+        umask "$OLDUMASK"
+        echo "Cannot prepare Xauthority directory, falling back to player" >>"$LOG"
+        exec /usr/local/bin/lp7player
+    fi
+    rm -f "$AUTH"
+    COOKIE=$(python3 -c 'import os;print(os.urandom(16).hex())' 2>/dev/null) || COOKIE=
+    if [ "${#COOKIE}" -ne 32 ] || ! xauth -f "$AUTH" add :0 MIT-MAGIC-COOKIE-1 "$COOKIE" >/dev/null 2>&1; then
+        unset COOKIE
+        umask "$OLDUMASK"
+        rm -f "$AUTH"
+        echo "Cannot create Xauthority, falling back to player" >>"$LOG"
+        exec /usr/local/bin/lp7player
+    fi
+    unset COOKIE
+    if ! chown root:10000 "$AUTH" || ! chmod 0640 "$AUTH"; then
+        umask "$OLDUMASK"
+        rm -f "$AUTH"
+        echo "Cannot set Xauthority permissions, falling back to player" >>"$LOG"
+        exec /usr/local/bin/lp7player
+    fi
+    umask "$OLDUMASK"
+fi
+
 if [ ! -S /tmp/.X11-unix/X0 ]; then
-    X :0 -nolisten tcp -ac vt1 -logfile /var/log/Xorg.0.log >>"$LOG" 2>&1 &
+    if [ "$XAUTH_MODE" = auth ]; then
+        X :0 -nolisten tcp -auth "$AUTH" vt1 -logfile /var/log/Xorg.0.log >>"$LOG" 2>&1 &
+    else
+        X :0 -nolisten tcp -ac vt1 -logfile /var/log/Xorg.0.log >>"$LOG" 2>&1 &
+    fi
     i=0
     while [ ! -S /tmp/.X11-unix/X0 ] && [ $i -lt 20 ]; do
         sleep 1; i=$((i+1))
@@ -33,17 +78,33 @@ if [ ! -S /tmp/.X11-unix/X0 ]; then
 fi
 
 export DISPLAY=:0
+if [ "$XAUTH_MODE" = auth ]; then export XAUTHORITY="$AUTH"; else unset XAUTHORITY; fi
 export HOME=/home/user
 export XDG_CONFIG_HOME=/home/user/.config
 export XDG_CACHE_HOME=/home/user/.cache
 xset s off -dpms 2>/dev/null
-/usr/local/bin/fbpan-ng 10 >/dev/null 2>&1 &
+/usr/local/bin/fbdmg -r 60 >>"$LOG" 2>&1 &
+PAN_PID=$!
+sleep 0.1
+if ! kill -0 "$PAN_PID" 2>/dev/null; then
+    wait "$PAN_PID"
+    PAN_RC=$?
+    if [ "$PAN_RC" -eq 2 ]; then
+        echo "XDamage unavailable; falling back to fbpan-ng" >>"$LOG"
+        /usr/local/bin/fbpan-ng 10 >/dev/null 2>&1 &
+    else
+        echo "fbdmg failed rc=$PAN_RC; falling back to fbpan-ng" >>"$LOG"
+        /usr/local/bin/fbpan-ng 10 >/dev/null 2>&1 &
+    fi
+fi
 
 /usr/local/bin/graphite-shell >>"$LOG" 2>&1
 RC=$?
 echo "graphite-shell exited rc=$RC, falling back to player" >>"$LOG"
 
 killall fbpan-ng 2>/dev/null
+killall fbdmg 2>/dev/null
 killall Xorg 2>/dev/null
 sleep 0.5
+rm -f "$AUTH"
 exec /usr/local/bin/lp7player

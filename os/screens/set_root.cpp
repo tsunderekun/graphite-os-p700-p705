@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <glob.h>
 #include <string>
 #include <dirent.h>
 #include <unistd.h>
@@ -106,35 +107,39 @@ struct NetInfo {
     std::string ip;
     std::string ssid;
     bool live = false;
+    bool up = false;
 };
 
 std::string read_ssid() {
-    const char *paths[] = {
-        "/etc/wpa_supplicant/wpa_supplicant.conf",
-        "/etc/wpa_supplicant.conf",
-    };
-    for (const char *path : paths) {
-        FILE *f = std::fopen(path, "rb");
-        if (!f) continue;
-        char line[256];
-        while (std::fgets(line, sizeof(line), f)) {
-            char *p = std::strstr(line, "ssid=\"");
-            if (!p) continue;
-            p += 6;
-            char *q = std::strchr(p, '"');
-            if (q) *q = 0;
+    glob_t g{};
+    std::string found;
+    if (glob("/etc/wpa_supplicant*.conf", 0, nullptr, &g) == 0) {
+        for (size_t gi = 0; gi < g.gl_pathc && found.empty(); ++gi) {
+            FILE *f = std::fopen(g.gl_pathv[gi], "rb");
+            if (!f) continue;
+            char line[256];
+            while (std::fgets(line, sizeof(line), f)) {
+                char *p = std::strstr(line, "ssid=\"");
+                if (!p) continue;
+                p += 6;
+                char *q = std::strchr(p, '"');
+                if (q) *q = 0;
+                found = p;
+                break;
+            }
             std::fclose(f);
-            return p;
         }
-        std::fclose(f);
+        globfree(&g);
     }
-    return std::string();
+    return found;
 }
 
 NetInfo read_net() {
     NetInfo n;
     if (access("/sys/class/net/wlan0", F_OK) != 0) return n;
     n.live = true;
+    std::string flags = rd("/sys/class/net/wlan0/flags");
+    n.up = !flags.empty() && (std::strtoul(flags.c_str(), nullptr, 0) & 1u);
     struct ifaddrs *ifs = nullptr;
     if (getifaddrs(&ifs) == 0) {
         for (struct ifaddrs *a = ifs; a; a = a->ifa_next) {
@@ -263,18 +268,9 @@ std::string launch_sub() {
                                                 : "текущий режим · shell";
 }
 
-std::string access_sub() {
-    bool usb = cfg.geti("ssh_usb", 1) != 0;
-    bool wifi = cfg.geti("ssh_wifi", 1) != 0;
-    if (usb && wifi) return "SSH по USB и Wi-Fi";
-    if (usb) return "SSH по USB";
-    if (wifi) return "SSH по Wi-Fi";
-    return "SSH выключен";
-}
+std::string access_sub() { return "Dropbear · PIN блокировки"; }
 
-std::string access_val() {
-    return cfg.geti("pin_set", 0) ? "PIN есть" : "PIN нет";
-}
+std::string access_val() { return "SSH"; }
 
 std::string route_text() {
     std::string s = rd("/sys/class/switch/h2w/state");
@@ -347,10 +343,10 @@ struct Root : ScreenView {
 
     void draw(Gfx &g) override {
         ui_bg(g);
-        const bool wifi_on = cfg.geti("wifi", 1) != 0;
+        const bool wifi_on = net.up;
         const std::string net_sub = !wifi_on ? "Wi-Fi выключен"
             : (net.ip.empty() ? "Wi-Fi · нет IP"
-                              : "Wi-Fi · " + (net.ssid.empty() ? "сеть" : net.ssid));
+                              : "Wi-Fi · SSID из конфигурации");
         const std::string net_val = !wifi_on ? "—" : (net.ip.empty() ? "—" : net.ip);
 
         std::string pwr_sub, pwr_val;
@@ -391,7 +387,7 @@ struct Root : ScreenView {
         row(g, y, "grid", "Приложения", apps_sub, apps_val, true, true); y += 56;
         row(g, y, "power", "Запуск", launch_sub(), launch_text(), true, false); y += 56;
         row(g, y, "lock", "Доступ", access_sub(), access_val(), true, false); y += 56;
-        row(g, y, "lab", "Лаборатория", "fb/pan · MPD · jack · QA", "", true, false); y += 56;
+        row(g, y, "lab", "Лаборатория", "read-only · логи", "", true, false); y += 56;
         row(g, y, "info", "О телефоне", "pmOS edge · ядро #23", "P700", true, false);
     }
 

@@ -29,23 +29,23 @@ The P705 is close to the P700, but differs in its NFC configuration. A component
 
 ## What works
 
-At the center is a single full-screen Xlib shell, with no window manager. It has home, player, library, queue, settings, apps, files, notes, terminal, browser, shade and lock screens, plus themes and system settings.
+At the center is a full-screen Xlib shell, with no window manager. Alongside home, player, library, queue, settings, apps, files, notes, terminal and browser, it has a task screen (two external-app slots; long-press Home opens it), a notification shade, PIN lock, a reader for TXT/FB2/FB2.zip/EPUB 2/3, a PNG/JPEG viewer, and clock and timer screens. Wide photos are displayed in landscape in the viewer. Files can be opened from Files in the matching reader or image viewer.
 
 Touch, physical keys and basic gestures work. Wi-Fi, audio and headphones, the SD card, battery indication and screenshots have worked on the tested setup. Results depend on the image and the individual phone; a host preview is no substitute for testing on the device.
 
 ## What does not (yet)
 
-Bluetooth, GPS, SIM and calls, the camera and GPU acceleration are not considered working. A reader, system notifications and full task management, USB modes and a recovery release are still planned. The project is under development; an item appearing on screen does not necessarily mean the system feature behind it is ready.
+Telephony (SIM and calls), camera, video, GPU acceleration, Bluetooth and GPS are not implemented. Suspend is not used; a safe suspend mode has not been verified. Background work by external apps is limited. The PIN is an access barrier, not encryption. The shade shows up to three cards and `+N`, but does not keep persistent history. The viewer and clock/timer have passed host tests but have not yet been run on the phone.
 
 ## Installation
 
 The postmarketOS port is archived and based on a downstream 3.4 kernel. Installation is experimental: an unlocked bootloader, V20 baseband and a ZIP-capable recovery are required (the verified unit runs ClockworkMod 6.0.3.2). It can erase data or leave the phone unable to boot. Read the [full guide](docs/en/install.md) or the [Russian guide](docs/ru/install.md) first, and have a recovery path ready.
 
-There is no ready-to-flash recovery ZIP yet; one is in preparation. The guide covers a manual installation path and does not guarantee it will work on every device revision.
+The recovery workflow has been tested on the test unit, including a nandroid rollback; this is not a public recovery release or a guarantee for other device revisions.
 
 ## Build and run
 
-On a configured Alpine/postmarketOS device:
+The shell is built with `-O2`. On a configured Alpine/postmarketOS device:
 
 ```sh
 cd os && ./build.sh

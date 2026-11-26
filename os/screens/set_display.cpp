@@ -1,9 +1,6 @@
-// S4 "Экран и вид" — live theme preview, 7 themes, 4 accents, texture and
-// brightness. The screen timeout is not implemented anywhere in the shell, so
-// it is not part of this screen either.
+// S4 "Экран и вид" — theme, accent, dim/lock timers and brightness.
 //
 // Grid: 24 px side margins, 432 px column, 8 px rhythm (see DESIGN-SYSTEM.md).
-// Header 32…96, preview 104…184, sections at 184 / 520 / 612 / 696, footer 781.
 #include "graphite.h"
 #include <cstdio>
 #include <cstring>
@@ -25,8 +22,8 @@ const int kThemesY = 212;     // first theme row (7 × 44)
 const int kThemeRow = 44;
 const int kAccentY = 544;     // first swatch (4 × 108 cells)
 const int kAccentCell = 108;
-const int kTexY = 640;        // texture master row (56)
-const int kBrightY = 720;     // brightness label
+const int kTimerLinkY = 620;
+const int kBrightY = 680;
 
 bool hit(int x, int y, int rx, int ry, int rw, int rh) {
     return x >= rx && x < rx + rw && y >= ry && y < ry + rh;
@@ -44,16 +41,17 @@ const char *const THEMES[7] = {
 const char *const ACCENTS[4] = { "turquoise", "amber", "blue", "green" };
 const char *const ACCENT_NAMES[4] = { "Бирюза", "Янтарь", "Синий", "Зелёный" };
 
+bool texture_on() { return cfg.get("tex", "auto") != "off"; }
+
 const char *family_name(int f) {
     if (f == FAM_LIGHT) return "СВЕТЛАЯ";
     if (f == FAM_GREY) return "СЕРАЯ";
     return "ТЁМНАЯ";
 }
 
-bool texture_on() { return cfg.get("tex", "auto") != "off"; }
-
-void save_key(const char *k, const char *v) {
-    if (!settings_save_key(k, v)) cfg.set(k, v);   // keep the UI live on read-only /etc
+bool save_key(const char *k, const char *v) {
+    if (!settings_save_key(k, v)) { app.toast("Ошибка записи настроек"); return false; }
+    return true;
 }
 
 int read_brightness() {
@@ -66,13 +64,15 @@ int read_brightness() {
     return v > 255 ? 255 : v;
 }
 
-void write_brightness(int v) {
+bool write_brightness(int v) {
     int fd = ::open("/sys/class/leds/lcd-backlight/brightness", O_WRONLY | O_TRUNC);
-    if (fd < 0) return;
+    if (fd < 0) return false;
     std::string s = std::to_string(v) + "\n";
     ssize_t n = ::write(fd, s.data(), s.size());
-    (void)n;
-    ::close(fd);
+    int saved = errno;
+    int cr = ::close(fd);
+    errno = saved;
+    return n == (ssize_t)s.size() && cr == 0;
 }
 
 struct DisplayScreen : ScreenView {
@@ -106,7 +106,7 @@ struct DisplayScreen : ScreenView {
         bright = v;
         unsigned now = now_ms();
         if (now - last_write >= 100) {
-            write_brightness(bright);
+            if (!write_brightness(bright)) app.toast("Ошибка записи яркости sysfs");
             last_write = now;
         }
         pending = true;
@@ -115,8 +115,8 @@ struct DisplayScreen : ScreenView {
 
     void tick(unsigned now) override {
         if (pending && now - pending_at >= 400) {
-            write_brightness(bright);
-            save_key("brightness", std::to_string(bright).c_str());
+            if (!write_brightness(bright)) app.toast("Ошибка записи яркости sysfs");
+            else save_key("brightness", std::to_string(bright).c_str());
             pending = false;
         }
     }
@@ -199,27 +199,15 @@ struct DisplayScreen : ScreenView {
         }
         theme_set(cur.c_str(), acp);
 
-        // ── ТЕКСТУРА: master row 56, switch right-aligned ─────────────
-        ui_section(g, 612, "ТЕКСТУРА");
-        g.hline(0, kTexY, g.cv.w, theme.line2);
-        bool ton = texture_on();
-        g.text(kPad, kTexY + 8, "Текстура фона", 16, theme.fg);
-        g.text(kPad, kTexY + 28,
-               ton ? "шероховатость · авто" : "выключена · ровный фон",
-               12, theme.dim);
-        g.text(404, kTexY + 17, ton ? "ВКЛ" : "ВЫКЛ", 11, theme.dim, TF_RIGHT);
-        ui_switch(g, 412, kTexY + 16, ton);
+        g.hline(0, kTimerLinkY, g.cv.w, theme.line2);
+        g.text(kPad, kTimerLinkY + 14, "Таймеры и текстура", 15, theme.fg);
+        icon(g, "chevron", kRight - 18, kTimerLinkY + 14, 16, theme.dim);
+        g.hline(0, kTimerLinkY + 56, g.cv.w, theme.line2);
 
-        g.text(kPad, kTexY + 56,
-               g.fit(ton ? "Зерно на светлых, верже на тёмных"
-                         : "Текстура выключена везде; фон остаётся цветом темы",
-                     11, kCol), 11, theme.dim);
+        g.hline(0, kBrightY - 4, g.cv.w, theme.line2);
+        ui_slider(g, kPad, kBrightY + 16, kCol, pct(), "ЯРКОСТЬ", bright_text().c_str());
 
         // ── ЯРКОСТЬ: track 24…456, knob 16 ───────────────────────────
-        g.hline(0, kBrightY - 4, g.cv.w, theme.line2);
-        ui_slider(g, kPad, kBrightY + 4, kCol, pct(), "ЯРКОСТЬ",
-                  bright_text().c_str());
-
         g.text(kPad, 781, "ЭКРАН · LM3530", 11, theme.dim);
         g.text(kRight, 781, "7 ТЕМ · 4 АКЦЕНТА", 11, theme.dim, TF_RIGHT);
     }
@@ -230,8 +218,7 @@ struct DisplayScreen : ScreenView {
         if (y >= kThemesY && y < kThemesY + 7 * kThemeRow) {
             int i = (y - kThemesY) / kThemeRow;
             const std::string ac = cfg.get("accent", "");
-            theme_set(THEMES[i], ac.empty() ? nullptr : ac.c_str());
-            save_key("theme", THEMES[i]);
+            if (save_key("theme", THEMES[i])) theme_set(THEMES[i], ac.empty() ? nullptr : ac.c_str());
             return true;
         }
 
@@ -239,18 +226,17 @@ struct DisplayScreen : ScreenView {
             int i = (x - kPad) / kAccentCell;
             if (i >= 0 && i < 4) {
                 const std::string cur = theme.id ? theme.id : "graphite";
-                theme_set(cur.c_str(), ACCENTS[i]);
-                save_key("accent", ACCENTS[i]);
+                if (save_key("accent", ACCENTS[i])) theme_set(cur.c_str(), ACCENTS[i]);
                 return true;
             }
         }
 
-        if (y >= kTexY && y < kTexY + 56) {
-            save_key("tex", texture_on() ? "off" : "auto");
+        if (y >= kTimerLinkY && y < kTimerLinkY + 56) {
+            app.push("set-timers");
             return true;
         }
 
-        if (y >= kBrightY - 12 && y < 776) {
+        if (y >= kBrightY + 40 && y < 776) {
             set_bright(x);
             return true;
         }
@@ -260,7 +246,7 @@ struct DisplayScreen : ScreenView {
     bool drag(int x, int y, int dx, int dy) override {
         (void)dx;
         (void)dy;
-        if (y < kBrightY - 12 || y >= 776) return false;
+        if (y < kBrightY + 40 || y >= 776) return false;
         set_bright(x);
         return true;
     }

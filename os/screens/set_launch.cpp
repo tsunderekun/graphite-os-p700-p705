@@ -7,6 +7,8 @@
 #include <string>
 #include <unistd.h>
 #include <fcntl.h>
+#include <cerrno>
+#include <sys/stat.h>
 
 namespace {
 
@@ -28,16 +30,6 @@ std::string read_first(const char *path) {
     char *r = std::fgets(line, sizeof(line), f);
     std::fclose(f);
     return r ? trim(line) : "";
-}
-
-bool write_mode(const char *val) {
-    int fd = ::open("/etc/lgtest-mode", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) return false;
-    std::string s = std::string(val) + "\n";
-    ssize_t n = ::write(fd, s.data(), s.size());
-    (void)n;
-    ::close(fd);
-    return true;
 }
 
 std::string pids_named(const char *a, const char *b, const char *c = nullptr) {
@@ -123,8 +115,7 @@ struct SetLaunch : ScreenView {
         int y = 96;
         y = ui_section(g, y, "РЕЖИМ");
 
-        static const char *const items[] = {"ОБОЛОЧКА", "БЕЗ X"};
-        ui_seg(g, 24, y, 432, items, 2, nox ? 1 : 0);
+        g.text(24, y + 8, "Выбор режима отключён до проверки recovery-пути.", 12, theme.dim);
         y += 44;
 
         g.rect(24, y + 8, 432, 80, theme.surf);
@@ -146,10 +137,7 @@ struct SetLaunch : ScreenView {
         y = kv(g, y, "СЕССИЯ", "session-shell · X + fbpan-ng");
         y = kv(g, y, "ФАЙЛ", "/etc/lgtest-mode");
 
-        g.rect(24, y + 8, 432, 48, reboot_armed ? theme.accent : theme.surf);
-        g.text(240, y + 26,
-               reboot_armed ? "ПОДТВЕРДИТЬ ПЕРЕЗАГРУЗКУ" : "ПЕРЕЗАГРУЗИТЬ",
-               13, reboot_armed ? theme.onacc : theme.fg, TF_CENTER | TF_BOLD);
+        g.text(24, y + 8, "Перезагрузка отключена: recovery не подтверждён.", 12, theme.dim);
         y += 56;
 
         g.rect(24, y + 8, 432, 48, theme.surf);
@@ -160,37 +148,6 @@ struct SetLaunch : ScreenView {
     }
 
     bool tap(int x, int y) override {
-        if (y >= 124 && y < 168) {
-            if (x >= 24 && x < 236) {
-                nox = false;
-                if (!write_mode("shell"))
-                    app.toast("Не удалось записать /etc/lgtest-mode");
-                else
-                    app.toast("После перезагрузки: оболочка");
-                return true;
-            }
-            if (x >= 244 && x < 456) {
-                nox = true;
-                if (!write_mode("player"))
-                    app.toast("Не удалось записать /etc/lgtest-mode");
-                else
-                    app.toast("После перезагрузки: без X (плеер)");
-                return true;
-            }
-        }
-        if (hit(x, y, 24, 652, 432, 48)) {
-            if (!reboot_armed) {
-                reboot_armed = true;
-                app.toast("Ещё один тап — перезагрузка");
-            } else {
-                reboot_armed = false;
-                app.toast("Перезагрузка…");
-                sync();
-                int rc = std::system("reboot");
-                (void)rc;
-            }
-            return true;
-        }
         if (hit(x, y, 24, 716, 432, 48)) {
             app.open("power");
             return true;

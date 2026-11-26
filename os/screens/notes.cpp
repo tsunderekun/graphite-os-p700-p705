@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <algorithm>
+#include <cerrno>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -376,6 +377,9 @@ struct Notes : ScreenView {
     unsigned long last_save = 0;
     bool has_mod = false;
     time_t last_mod = 0;
+    off_t last_size = 0;
+    ino_t last_ino = 0;
+    bool truncated = false;
     std::vector<UndoOp> undo;
     int undo_pos = 0;
 
@@ -411,7 +415,8 @@ struct Notes : ScreenView {
         bool cut = false;
         if (read_file(path, nx, cut)) {
             body.swap(nx);
-            has_mod = mtime_of(path, last_mod);
+            truncated = cut;
+            struct stat st; if (stat(path.c_str(), &st) == 0) { has_mod=true; last_mod=st.st_mtime; last_size=st.st_size; last_ino=st.st_ino; }
         }
         if (body.empty()) body.push_back("");
         cur_line = (int)body.size() - 1;
@@ -470,6 +475,11 @@ struct Notes : ScreenView {
 
     // tmp + fsync + rename + fsync(dir): a power cut never leaves half a note.
     bool save_note(bool quiet = false) {
+        if (truncated) { app.toast("Усечённый файл: сохранение запрещено"); return false; }
+        struct stat current;
+        if (has_mod && (stat(path.c_str(), &current) != 0 || current.st_mtime != last_mod || current.st_size != last_size || current.st_ino != last_ino)) {
+            app.toast("Конфликт: файл изменён извне"); return false;
+        }
         std::string dir = parent_dir(path);
         if (!dir.empty()) mkdirs(dir);
         std::string tmp = path + ".tmp";
@@ -502,8 +512,8 @@ struct Notes : ScreenView {
             close(dfd);
         }
         dirty = false;
-        has_mod = true;
-        last_mod = time(nullptr);
+        has_mod = stat(path.c_str(), &current) == 0;
+        if (has_mod) { last_mod=current.st_mtime; last_size=current.st_size; last_ino=current.st_ino; }
         last_save = now_ms();
         if (!quiet) app.toast("Сохранено");
         return true;
@@ -540,8 +550,9 @@ struct Notes : ScreenView {
         }
         path = p;
         body.swap(nx);
+        truncated = cut;
         if (body.empty()) body.push_back("");
-        has_mod = mtime_of(p, last_mod);
+        struct stat st; has_mod=stat(p.c_str(), &st)==0 && S_ISREG(st.st_mode); if(has_mod){last_mod=st.st_mtime;last_size=st.st_size;last_ino=st.st_ino;}
         last_save = 0;
         dirty = false;
         cur_line = 0;
@@ -552,7 +563,7 @@ struct Notes : ScreenView {
         undo_pos = 0;
         layout_all();
         ensure_cursor_visible();
-        if (cut) app.toast("Файл обрезан до 2 МБ");
+        if (cut) app.toast("Файл обрезан: только чтение, сохраните копию");
         return true;
     }
 
@@ -741,6 +752,7 @@ struct Notes : ScreenView {
     }
 
     void insert_text(const std::string &t) {
+        if (truncated) { app.toast("Файл усечён — только чтение"); return; }
         if (t.empty()) return;
         std::string &ln = body[(size_t)cur_line];
         if (ln.size() + t.size() > MAX_LINE) {
@@ -760,6 +772,7 @@ struct Notes : ScreenView {
     }
 
     void insert_enter() {
+        if (truncated) { app.toast("Файл усечён — только чтение"); return; }
         if (body.size() >= MAX_LINES) {
             app.toast("Слишком много строк");
             return;
@@ -783,6 +796,7 @@ struct Notes : ScreenView {
     }
 
     void backspace() {
+        if (truncated) { app.toast("Файл усечён — только чтение"); return; }
         if (cur_col > 0) {
             int at = cur_line;
             std::string &ln = body[(size_t)at];
@@ -820,6 +834,7 @@ struct Notes : ScreenView {
     }
 
     void del_forward() {
+        if (truncated) { app.toast("Файл усечён — только чтение"); return; }
         if (cur_col < cp_count(body[(size_t)cur_line])) {
             int at = cur_line;
             std::string &ln = body[(size_t)at];
@@ -1047,21 +1062,20 @@ struct Notes : ScreenView {
         if (!autosave_now()) return;
         if (dir.empty() || !is_dir(dir)) dir = home_dir() + "/.config/graphite";
         mkdirs(dir);
-        std::string cand = join(dir, "новая-заметка.txt");
-        for (int i = 2; i < 100 && exists(cand); i++) {
+        std::string cand;
+        for (unsigned long i = 1;; i++) {
             char b[64];
-            std::snprintf(b, sizeof b, "новая-заметка-%d.txt", i);
+            if (i == 1) std::snprintf(b,sizeof b,"новая-заметка.txt");
+            else std::snprintf(b, sizeof b, "новая-заметка-%lu.txt", i);
             cand = join(dir, b);
+            int fd = open(cand.c_str(), O_WRONLY|O_CREAT|O_EXCL, 0644);
+            if(fd>=0){close(fd);break;}
+            if(errno!=EEXIST){app.toast("Не удалось создать файл");return;}
         }
-        FILE *f = std::fopen(cand.c_str(), "wb");
-        if (!f) {
-            app.toast("Не удалось создать файл");
-            return;
-        }
-        std::fclose(f);
         path = cand;
+        truncated = false;
         body.assign(1, "");
-        has_mod = mtime_of(path, last_mod);
+        struct stat st; has_mod=stat(path.c_str(), &st)==0; if(has_mod){last_mod=st.st_mtime;last_size=st.st_size;last_ino=st.st_ino;}
         last_save = 0;
         dirty = false;
         cur_line = 0;
@@ -1546,16 +1560,16 @@ struct Notes : ScreenView {
     }
 
     void draw_actions(Gfx &g) {
-        g.rect(10, 246, 460, 248, theme.bar);
-        g.frame(10, 246, 460, 248, theme.line2);
+        g.rect(10, 246, 460, 236, theme.bar);
+        g.frame(10, 246, 460, 236, theme.line2);
         if (dlg_idx >= 0 && dlg_idx < (int)notes.size()) {
             g.text(30, 266, g.fit(notes[(size_t)dlg_idx].name, 15, 400), 15,
                    theme.fg);
         }
-        g.rect(20, 312, 440, 52, theme.surf);
-        g.text(240, 328, "Переименовать", 15, theme.fg, TF_CENTER);
-        g.rect(20, 372, 440, 52, theme.surf);
-        g.text(240, 388, "Удалить", 15, theme.accent, TF_CENTER);
+        g.rect(20, 312, 440, 48, theme.surf);
+        g.text(240, 326, "Переименовать", 15, theme.fg, TF_CENTER);
+        g.rect(20, 368, 440, 48, theme.surf);
+        g.text(240, 382, "Удалить", 15, theme.accent, TF_CENTER);
         g.rect(20, 432, 440, 44, theme.surf);
         g.text(240, 445, "Отмена", 14, theme.dim, TF_CENTER);
     }
@@ -1796,11 +1810,11 @@ struct Notes : ScreenView {
     }
 
     bool actions_tap(int x, int y) {
-        if (hit(x, y, 20, 312, 440, 52)) {
+        if (hit(x, y, 20, 312, 440, 48)) {
             start_rename();
             return true;
         }
-        if (hit(x, y, 20, 372, 440, 52)) {
+        if (hit(x, y, 20, 368, 440, 48)) {
             mode = M_DELETE;
             return true;
         }

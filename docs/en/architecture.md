@@ -1,6 +1,15 @@
 # graphite shell architecture
 
+Snapshot, 26 Nov 2026: apphost uses `Task[2]`; fbdmg updates the framebuffer
+from XDamage events rather than comparing frames with `memcmp`. Frames use
+XShm, with an XPutImage fallback. The glyph cache is FIFO-limited to 4096 glyphs
+and 8 MiB. The shell is built with `-O2`.
+
 ## Implemented
+
+Framebuffer updates use fbdmg with XDamage (up to 60 Hz plus a one-second
+safety pan), not frame-by-frame `memcmp`. The FIFO FreeType glyph cache is
+limited to 4096 glyphs/8 MiB; the shell is built with `-O2`.
 
 - The session runs Xorg on fbdev at 16 bpp, with the image rotated by 180 degrees. `session-shell` starts `fbpan-ng 10` to refresh the panel. Xorg and the framebuffer player must not own the framebuffer at the same time.
 - The shell is a single full-screen Xlib application at 480×800. It has no window manager, no GTK/Qt in the shell itself, and no compositor.
@@ -61,4 +70,3 @@ The application API sets `W=480`, `H=800`, and a default depth of 16. The status
 Theme and other settings are loaded from `/etc/lgtest-settings`. Configuration writes and system-file permissions depend on the installation; this documentation does not assume every setting is available to an ordinary user.
 
 The X server runs locally on display `:0` without a TCP listener. This limits network exposure; local access is checked with a cookie, and `-ac` remains a development fallback only.
-

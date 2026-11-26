@@ -1,10 +1,10 @@
 # MASTER-PLAN — graphite shell / LG P700
 
-Snapshot: 25.11.2026. Consolidation plan; this document does not itself confirm a new device test.
+Snapshot: 26 Nov 2026. The shell boots on the P705; status below is reconciled with STATUS.md.
 
 ## Verdict
 
-Graphite already boots as an Xlib shell on the P700: the main screens, settings, hardware-key input, shade, lock, apphost, browser/terminal, and P0 player/files/notes have documented device checks. It is a working mobile OS prototype, but not yet a release-ready shell: full multitasking and system notifications are missing, text input is not unified, UX edge cases remain, and there is no complete QA gate. The next 1–2 weeks should stabilize what exists and complete everyday workflows; do not start low-level projects.
+Graphite runs as an Xlib shell. Tasks with two slots, PIN, shade, backlight power policy, file workflows and EPUB 2/3 were checked on-device. Host QA and two 30-minute soaks passed; this is not a complete release gate. Viewer and clock/timer remain host-only. Telephony, camera, video, GPU, Bluetooth, GPS and verified suspend are unavailable; PIN does not encrypt data.
 
 ## Status
 

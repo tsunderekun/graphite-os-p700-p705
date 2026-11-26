@@ -244,10 +244,13 @@ struct SetStorage : ScreenView {
     }
 
     const char *id() const override { return "set-storage"; }
+    bool scrollable() const override { return true; }
+    int content_height(int) const override { return 820; }
 
     void draw(Gfx &g) override {
         ui_bg(g);
         ui_header(g, "Хранилище", "ROOT + SD", true);
+        g.begin_body(96, 760, scroll_y);
         int y = 96;
         y = ui_section(g, y, "НАКОПИТЕЛИ");
 
@@ -287,11 +290,13 @@ struct SetStorage : ScreenView {
         g.text(24, y + 6, g.fit("очистка не трогает музыку, заметки и индекс MPD",
                                 11, 432), 11, theme.dim);
 
+        g.end_body();
         g.text(24, 781, "ХРАНИЛИЩЕ · df /", 11, theme.dim);
         g.text(456, 781, "eMMC + SD", 11, theme.dim, TF_RIGHT);
     }
 
     bool tap(int x, int y) override {
+        if (y < 96 || y >= 760) return false;
         if (hit(x, y, 0, 252, 480, 56)) {
             if (!sd_ok) {
                 extract_armed = false;

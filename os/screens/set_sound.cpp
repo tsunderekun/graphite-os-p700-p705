@@ -136,6 +136,11 @@ struct Sound : ScreenView {
     }
 
     const char *id() const override { return "set-sound"; }
+    bool scrollable() const override { return true; }
+    int content_height(int) const override { return 680; }
+    bool scroll_gesture_excluded(int, int y) const override {
+        return y >= 176 && y < 226;
+    }
 
     int db() const { return db_from_step(step); }
 
@@ -186,6 +191,7 @@ struct Sound : ScreenView {
 
         ui_bg(g);
         ui_header(g, "Звук", (std::string("MPD · ") + route_short()).c_str(), true);
+        g.begin_body(96, 760, scroll_y);
 
         section(g, 96, "ГРОМКОСТЬ");
         g.text(24, 128, dbv, 30, theme.fg, TF_LIGHT);
@@ -227,6 +233,7 @@ struct Sound : ScreenView {
         g.text(24, 696,
                "Звук в системе один — MPD; системного микшера нет", 11, theme.dim);
 
+        g.end_body();
         g.text(24, 781, "ЗВУК · MPD", 11, theme.dim);
         std::string right = conn ? state_text(st) : "нет связи";
         if (conn && st.volume >= 0) right += " · " + std::to_string(st.volume) + " %";
@@ -242,6 +249,7 @@ struct Sound : ScreenView {
     bool drag(int x, int y, int dx, int dy) override {
         (void)dx;
         (void)dy;
+        y += scroll_y;
         if (y < 176 || y >= 226) return false;
         set_vol(x);
         return true;

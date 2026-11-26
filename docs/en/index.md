@@ -2,9 +2,15 @@
 
 # Documentation — technical plans
 
+Snapshot, 26 Nov 2026: the shell runs on the test P705. Implemented features
+include two task slots, a notification shade, PIN lock, a TXT/FB2/FB2.zip/EPUB
+2/3 reader, PNG/JPEG viewer, and clock/timer. Some new screens have only been
+host-tested; individual pages state the verification status and limitations.
+This is not a release image.
+
 Russian originals of the plans and studies for the graphite shell project (LG P700). The texts were written for internal use, in working order: these are engineering notes with numbers and decisions, not polished documentation.
 
-English versions live in `docs/en/`; translation is in progress.
+English versions live in `docs/en/`; key status information is kept in sync.
 
 ## Map
 

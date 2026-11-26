@@ -1,5 +1,14 @@
 ﻿# Power, heat and sleep mode
 
+**Current shell policy (26 Nov 2026):** touch input and keys count as activity.
+Dim and lock change backlight only; the panel/DSI remain on. Do not enable
+suspend: a safe sleep mode has not been verified.
+
+**Current shell power policy (26 Nov 2026):** touch press/release, dragging and
+keys reset the idle timer. Dim/lock change backlight brightness only; the
+display panel and DSI remain on. Do not enable suspend: a safe suspend mode has
+not been verified.
+
 This document records observations and a power-verification plan for the LG P700. Estimates are distinguished from measurements; conclusions apply to the stated configuration and require verification on the target device.
 
 ## 1. What was collected and with which tools

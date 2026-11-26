@@ -22,6 +22,7 @@ WEAK ScreenView *make_notes() { return nullptr; }
 WEAK ScreenView *make_browser() { return nullptr; }
 WEAK ScreenView *make_reader() { return nullptr; }
 WEAK ScreenView *make_video() { return nullptr; }
+WEAK ScreenView *make_usb() { return nullptr; }
 WEAK ScreenView *make_set_root() { return nullptr; }
 WEAK ScreenView *make_set_display() { return nullptr; }
 WEAK ScreenView *make_set_wifi() { return nullptr; }

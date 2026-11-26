@@ -35,12 +35,11 @@ echo shell | sudo tee /etc/lgtest-mode
 `/etc/lgtest-mode`: `shell`, `desktop` или `player`.
 
 
-Синхронизация с ПК (`GRAPHITE_HOST` / `GRAPHITE_PASS` в окружении):
+Синхронизация с ПК:
 
 ```sh
-export GRAPHITE_HOST=<device-ip> GRAPHITE_PASS=<device-password>
 python os/sync.py os /home/user/os
-python os/ssh.py "cd /home/user/os && sh build.sh"
+python notes/ssh_cmd.py "cd /home/user/os && sh build.sh"
 ```
 
 Проверка одного файла (так делают агенты, чтобы не мешать друг другу):
@@ -88,7 +87,7 @@ fontconfig).
 
 ```sh
 GRAPHITE_FONTS=/usr/share/fonts/medeo ./build/graphite-shell
-GRAPHITE_SCREEN=lock GRAPHITE_FONTS=./os/fonts/medeo \
+GRAPHITE_SCREEN=lock GRAPHITE_FONTS=/path/to/repo/os/fonts/medeo \
     sh os/preview.sh medeo-lock :91
 ```
 

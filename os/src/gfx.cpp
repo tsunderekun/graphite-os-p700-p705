@@ -7,6 +7,8 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
+#include <deque>
 
 // ---------------------------------------------------------------- colors
 uint16_t rgb565(int r, int g, int b) {
@@ -112,7 +114,41 @@ void Canvas::copy_from(const Canvas &src) {
     std::memcpy(px.data(), src.px.data(), n * sizeof(uint16_t));
 }
 
+void Gfx::begin_body(int top, int bottom, int scroll) {
+    offset_y = -scroll; clip_top = top; clip_bottom = bottom;
+}
+void Gfx::end_body() { offset_y = clip_top = clip_bottom = 0; }
+void Gfx::rect(int x, int y, int w, int h, uint16_t c) {
+    bool body = !(clip_bottom <= clip_top || y + h <= clip_top || y >= clip_bottom);
+    if (body) {
+        int yy = y + offset_y;
+        int y0 = std::max(yy, clip_top);
+        int y1 = std::min(yy + h, clip_bottom);
+        cv.rect(x, y0, w, y1 - y0, c);
+    } else cv.rect(x, y, w, h, c);
+}
+void Gfx::frame(int x, int y, int w, int h, uint16_t c) {
+    hline(x, y, w, c); hline(x, y + h - 1, w, c);
+    vline(x, y, h, c); vline(x + w - 1, y, h, c);
+}
+void Gfx::hline(int x, int y, int w, uint16_t c) { rect(x, y, w, 1, c); }
+void Gfx::vline(int x, int y, int h, uint16_t c) { rect(x, y, 1, h, c); }
+
 // ---------------------------------------------------------------- text
+unsigned long gfx_text_us = 0, gfx_textw_us = 0;
+namespace {
+struct TScope {
+    struct timespec a;
+    unsigned long *acc;
+    explicit TScope(unsigned long *p) : acc(p) { clock_gettime(CLOCK_MONOTONIC, &a); }
+    ~TScope() {
+        struct timespec b;
+        clock_gettime(CLOCK_MONOTONIC, &b);
+        *acc += (unsigned long)(b.tv_sec - a.tv_sec) * 1000000UL +
+                (unsigned long)((b.tv_nsec - a.tv_nsec) / 1000);
+    }
+};
+}
 static FT_Library ft_lib = nullptr;
 static const char *ft_paths[4] = {nullptr, nullptr, nullptr, nullptr};
 struct FaceKey {
@@ -122,6 +158,59 @@ struct FaceKey {
     }
 };
 static std::map<FaceKey, FT_Face> faces;
+
+struct GlyphKey {
+    int style, px;
+    uint32_t cp;
+    bool operator<(const GlyphKey &o) const {
+        if (style != o.style) return style < o.style;
+        if (px != o.px) return px < o.px;
+        return cp < o.cp;
+    }
+};
+struct CachedGlyph {
+    int w, h, left, top, pitch, advance;
+    std::vector<unsigned char> bitmap;
+};
+static std::map<GlyphKey, CachedGlyph> glyphs;
+static std::deque<GlyphKey> glyph_fifo;
+static size_t glyph_bytes = 0;
+static const size_t kGlyphLimit = 4096;
+static const size_t kGlyphBytesLimit = 8 * 1024 * 1024;
+static FT_Face face_for(int style, int px);
+
+static const CachedGlyph *glyph_for(int style, int px, uint32_t cp) {
+    GlyphKey key{style, px, cp};
+    auto found = glyphs.find(key);
+    if (found != glyphs.end()) return &found->second;
+    FT_Face f = face_for(style, px);
+    if (!f || FT_Load_Char(f, cp, FT_LOAD_RENDER)) return nullptr;
+    FT_GlyphSlot gl = f->glyph;
+    CachedGlyph g;
+    g.w = (int)gl->bitmap.width;
+    g.h = (int)gl->bitmap.rows;
+    g.left = gl->bitmap_left;
+    g.top = gl->bitmap_top;
+    g.pitch = gl->bitmap.pitch;
+    g.advance = gl->advance.x >> 6;
+    const int stride = std::abs(g.pitch);
+    g.bitmap.resize((size_t)stride * g.h);
+    for (int row = 0; row < g.h; ++row) {
+        const unsigned char *src = gl->bitmap.buffer + row * g.pitch;
+        std::memcpy(g.bitmap.data() + (size_t)row * stride, src, stride);
+    }
+    const size_t bytes = g.bitmap.size();
+    while (!glyph_fifo.empty() &&
+           (glyphs.size() >= kGlyphLimit || glyph_bytes + bytes > kGlyphBytesLimit)) {
+        auto old = glyphs.find(glyph_fifo.front());
+        if (old != glyphs.end()) { glyph_bytes -= old->second.bitmap.size(); glyphs.erase(old); }
+        glyph_fifo.pop_front();
+    }
+    if (bytes > kGlyphBytesLimit) return nullptr;
+    glyph_fifo.push_back(key);
+    glyph_bytes += bytes;
+    return &glyphs.emplace(key, std::move(g)).first->second;
+}
 
 // Font slots: 0 regular, 1 bold, 2 light/display, 3 mono. Medeo is preferred,
 // DejaVu in the same directory and the system DejaVu are the fallbacks, so a
@@ -217,30 +306,29 @@ static int style_of(int flags) {
 }
 
 int Gfx::textw(const std::string &s, int px, int tracking) {
-    FT_Face f = face_for(0, px);
-    if (!f) return 0;
+    TScope ts(&gfx_textw_us);
     std::vector<uint32_t> cps;
     utf8(s, cps);
     int total = 0;
     for (uint32_t cp : cps) {
-        if (FT_Load_Char(f, cp, FT_LOAD_DEFAULT)) continue;
-        total += (f->glyph->advance.x >> 6);
+        const CachedGlyph *g = glyph_for(0, px, cp);
+        if (g) total += g->advance;
     }
     if (!cps.empty() && tracking) total += (int)(cps.size() - 1) * tracking;
     return total;
 }
 
 int Gfx::text(int x, int y, const std::string &s, int px, uint16_t c, int flags) {
+    TScope ts(&gfx_text_us);
     int style = style_of(flags);
-    FT_Face f = face_for(style, px);
-    if (!f || s.empty()) return 0;
+    if (s.empty()) return 0;
     std::vector<uint32_t> cps;
     utf8(s, cps);
 
     int total = 0;
     for (uint32_t cp : cps) {
-        if (FT_Load_Char(f, cp, FT_LOAD_DEFAULT)) continue;
-        total += (f->glyph->advance.x >> 6);
+        const CachedGlyph *g = glyph_for(style, px, cp);
+        if (g) total += g->advance;
     }
     if (flags & TF_CENTER) x -= total / 2;
     if (flags & TF_RIGHT) x -= total;
@@ -257,26 +345,32 @@ int Gfx::text(int x, int y, const std::string &s, int px, uint16_t c, int flags)
     // ceil(0.928 * px) at every size 11-40 (checked), so this reproduces the
     // DejaVu baseline to the pixel at 11/12/24, where round() would sit 1 px
     // high and lift the status bar and the terminal grid off the DejaVu rows.
+    FT_Face f = face_for(style, px);
+    if (!f) return 0;
     int asc = f->size->metrics.ascender >> 6;
     float dr = f->units_per_EM ? (float)f->ascender / (float)f->units_per_EM : 0.f;
     if (dr > 0.97f) asc = (int)std::ceil(px * 0.928f);
     if (asc <= 0) asc = (int)(px * 0.78f);
-    int base = y + asc;
+    bool body = !(clip_bottom <= clip_top || y + px <= clip_top || y >= clip_bottom);
+    int base = y + asc + (body ? offset_y : 0);
 
     int cursor = x;
     for (uint32_t cp : cps) {
-        if (FT_Load_Char(f, cp, FT_LOAD_RENDER)) continue;
-        FT_GlyphSlot gl = f->glyph;
-        int gx = cursor + gl->bitmap_left;
-        int gy = base - gl->bitmap_top;
-        for (unsigned row = 0; row < gl->bitmap.rows; row++) {
-            const unsigned char *rp = gl->bitmap.buffer + (int)row * gl->bitmap.pitch;
-            for (unsigned col = 0; col < gl->bitmap.width; col++) {
+        const CachedGlyph *gl = glyph_for(style, px, cp);
+        if (!gl) continue;
+        int gx = cursor + gl->left;
+        int gy = base - gl->top;
+        const int stride = std::abs(gl->pitch);
+        for (int row = 0; row < gl->h; row++) {
+            const unsigned char *rp = gl->bitmap.data() + (size_t)row * stride;
+            for (int col = 0; col < gl->w; col++) {
                 int a = rp[col];
-                if (a) cv.blend(gx + (int)col, gy + (int)row, c, a);
+                int py = gy + (int)row;
+                if (a && (!body || (py >= clip_top && py < clip_bottom)))
+                    cv.blend(gx + (int)col, py, c, a);
             }
         }
-        cursor += (gl->advance.x >> 6);
+        cursor += gl->advance;
     }
     return total;
 }

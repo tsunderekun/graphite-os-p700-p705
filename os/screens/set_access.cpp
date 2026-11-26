@@ -1,5 +1,6 @@
 // S9 "Доступ" — real dropbear service status/control and a real SD backup.
 #include "graphite.h"
+#include "lock_auth.h"
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <ifaddrs.h>
@@ -8,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <utmp.h>
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -132,7 +134,7 @@ int kv(Gfx &g, int y, const char *key, const std::string &val, bool muted = fals
     g.hline(0, y, g.cv.w, theme.line2);
     g.text(24, y + 8, g.fit(key, 12, 150), 12, theme.dim);
     g.text(184, y + 5, g.fit(val, 16, 272), 16, muted ? theme.dim : theme.fg);
-    return y + 44;
+    return y + 56;
 }
 
 int row(Gfx &g, int y, const char *name, const char *sub, const char *value,
@@ -155,7 +157,12 @@ int switch_row(Gfx &g, int y, const char *name, const char *sub, bool on) {
 }
 
 struct SetAccess : ScreenView {
+    std::string auth_pin, new_pin;
+    int auth_step = 0; // 0 idle, 1 current PIN, 2 new PIN, 3 confirm new PIN, 4 disable confirm
+    int pin_top = 0;   // PIN row y, set by draw() and reused by tap()
+    std::string auth_message;
     bool running = false;
+    bool stop_armed = false;
     std::string status = "остановлен";
     std::string usb_ip, wifi_ip;
     std::string sessions = "нет";
@@ -237,23 +244,38 @@ struct SetAccess : ScreenView {
 
     const char *id() const override { return "set-access"; }
 
+    void draw_auth(Gfx &g) {
+        g.rect(12, 192, 456, 444, theme.surf);
+        const char *title = auth_step == 1 ? "Введите текущий PIN" : auth_step == 2 ? "Новый PIN (4–8 цифр)" : auth_step == 3 ? "Повторите новый PIN" : auth_step == 4 ? "Управление PIN" : "Отключить PIN?";
+        if(auth_step==4){g.text(240,290,"СМЕНИТЬ PIN",18,theme.fg,TF_CENTER);g.rect(48,274,384,64,theme.bg);g.text(240,294,"СМЕНИТЬ PIN",18,theme.fg,TF_CENTER);g.rect(48,358,384,64,theme.bg);g.text(240,378,"ОТКЛЮЧИТЬ PIN",18,theme.fg,TF_CENTER);g.text(240,646,"ОТМЕНА",12,theme.dim,TF_CENTER);return;}
+        g.text(240, 212, title, 18, theme.fg, TF_CENTER);
+        for (size_t i=0;i<auth_pin.size() && i<8;i++) g.rect(240-(int)(std::min<size_t>(auth_pin.size(),8)-1)*18/2+(int)i*18-4,256,8,8,theme.accent);
+        const char *keys[]={"1","2","3","4","5","6","7","8","9","⌫","0","OK"};
+        for(int i=0;i<12;i++){int x=42+(i%3)*132,y=290+(i/3)*72;g.rect(x,y,112,56,theme.bg);g.text(x+56,y+16,keys[i],18,theme.fg,TF_CENTER);}
+        if(!auth_message.empty())g.text(240,590,g.fit(auth_message,12,420),12,theme.accent,TF_CENTER);
+        g.text(240,646,"ОТМЕНА",12,theme.dim,TF_CENTER);
+    }
+
     void draw(Gfx &g) override {
         ui_bg(g);
         ui_header(g, "Доступ", "SSH · DROPBEAR", true);
         int y = 96;
         y = ui_section(g, y, "SSH");
-        y = switch_row(g, y, "SSH · DROPBEAR", "порт 22 · rndis0 + wlan0", running);
+        y = switch_row(g, y, "Dropbear целиком", "остановка рвёт SSH на всех интерфейсах", running);
         y = kv(g, y, "СТАТУС", status, !running);
 
-        std::string usb = usb_ip.empty() ? "интерфейса нет" : usb_ip + ":22";
-        std::string wifi = wifi_ip.empty() ? "интерфейса нет" : wifi_ip + ":22";
-        y = kv(g, y, "SSH ПО USB", usb);
-        y = kv(g, y, "SSH ПО WI-FI", wifi);
+        // IPs only: the row has 272 px, "USB 172.16.42.1 · Wi-Fi 192.168…"
+        // was truncated. The section is already SSH, so the addresses suffice.
+        std::string ips;
+        if (!usb_ip.empty()) ips = usb_ip;
+        if (!wifi_ip.empty()) ips += (ips.empty() ? "" : " · ") + wifi_ip;
+        if (ips.empty()) ips = "—";
+        y = kv(g, y, "СЕТЬ", ips);
         y = kv(g, y, "ПАРОЛЬ", "user · /etc/shadow");
-        y = kv(g, y, "СЕССИИ", sessions);
-        y = kv(g, y, "КЛЮЧИ", "authorized_keys · " +
-                    std::string(file_ok("/home/user/.ssh/authorized_keys") ? "есть"
-                                                                          : "нет"));
+        y = kv(g, y, "СЕССИИ И КЛЮЧИ",
+               sessions + " · " +
+                   (file_ok("/home/user/.ssh/authorized_keys") ? "ключ есть"
+                                                               : "ключа нет"));
 
         y = ui_section(g, y, "СЕРВИС");
         y = row(g, y, "Бэкап настроек на SD", "lgtest-settings + pins · mkdir + cp",
@@ -270,11 +292,40 @@ struct SetAccess : ScreenView {
         g.text(24, 781, "ДОСТУП · SSH", 11, theme.dim);
         g.text(456, 781, running ? "dropbear" : "dropbear · стоп", 11, theme.dim,
                TF_RIGHT);
+        // The PIN row follows the hint line; tap() uses the same stored y so a
+        // change in the flow above can never leave a dead or shifted hit zone.
+        pin_top = y + 26;
+        g.hline(0, pin_top, g.cv.w, theme.line2);
+        g.text(24, pin_top + 7, lock_auth::enabled() ? "PIN блокировки · включён" : "PIN блокировки · выключен", 14, theme.fg);
+        g.text(24, pin_top + 29, lock_auth::enabled() ? "Тап: сменить или отключить" : "Тап: включить PIN", 12, theme.dim);
+        if(auth_step) draw_auth(g);
     }
 
     bool tap(int x, int y) override {
+        if(auth_step) {
+            if(y>=630 && y<680){auth_step=0;auth_pin.clear();new_pin.clear();auth_message.clear();return true;}
+            if(auth_step==4){if(y>=274&&y<338){auth_step=2;auth_message.clear();return true;}if(y>=358&&y<422){auth_step=5;auth_pin.clear();auth_message.clear();return true;}return true;}
+            if(auth_step==5){if(y>=290&&y<578){int c=(x-42)/132,r=(y-290)/72;if(x<42||c<0||c>2||r<0||r>3)return true;int idx=r*3+c;if(idx==9){if(!auth_pin.empty())auth_pin.pop_back();}else if(idx==11){auto result=lock_auth::clear(auth_pin);auth_message=result==lock_auth::Result::Ok?"PIN отключён":"Текущий PIN неверен или ошибка файла";auth_step=0;auth_pin.clear();app.toast(auth_message.c_str());}else if(auth_pin.size()<8)auth_pin.push_back(char('0'+(idx==10?0:idx+1)));}return true;}
+            if(y>=290 && y<578){int c=(x-42)/132,r=(y-290)/72;if(x<42||c<0||c>2||r<0||r>3)return true;int idx=r*3+c;
+                if(idx==9){if(!auth_pin.empty())auth_pin.pop_back();}
+                else if(idx==11){
+                    if(auth_step==1){if(lock_auth::verify(auth_pin)!=lock_auth::Result::Ok){auth_pin.clear();auth_message="Текущий PIN неверен";}else{auth_pin.clear();auth_step=lock_auth::enabled()?4:2;auth_message.clear();}}
+                    else if(auth_step==2){if(!lock_auth::valid_pin(auth_pin)){auth_pin.clear();auth_message="Нужно 4–8 цифр";}else{new_pin=auth_pin;auth_pin.clear();auth_step=3;}}
+                    else if(auth_step==3){if(auth_pin!=new_pin){auth_pin.clear();new_pin.clear();auth_step=2;auth_message="PIN не совпали · введите новый снова";}else{auto r=lock_auth::set(auth_pin);auth_message=r==lock_auth::Result::Ok?"PIN сохранён":"Ошибка записи PIN";auth_step=0;auth_pin.clear();new_pin.clear();app.toast(auth_message.c_str());}}
+                } else if(auth_pin.size()<8)auth_pin.push_back(char('0'+(idx==10?0:idx+1)));
+                return true;
+            }
+            return true;
+        }
+        if(hit(x,y,0,pin_top,480,56)){auth_step=lock_auth::enabled()?1:2;auth_pin.clear();new_pin.clear();auth_message.clear();return true;}
         if (hit(x, y, 0, 124, 480, 56)) {
-            set_ssh(!running);
+            if (running && !stop_armed) {
+                stop_armed = true;
+                app.toast("Внимание: отключит SSH везде. Повторный тап подтверждает");
+            } else {
+                stop_armed = false;
+                set_ssh(!running);
+            }
             return true;
         }
         if (hit(x, y, 0, 472, 480, 56)) {

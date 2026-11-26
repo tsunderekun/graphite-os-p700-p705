@@ -1,5 +1,13 @@
 # Installing postmarketOS on the LG P700/P705
 
+> The shell is built with `-O2`. Building `fbdmg` requires `libxdamage-dev`.
+> Normal X startup uses an MIT cookie (`-auth` and Xauthority); `-ac` is only
+> a development fallback when protection is explicitly disabled or `xauth` is
+> unavailable. The recovery workflow was tested on the test unit, including a
+> successful nandroid rollback; this is not a public recovery release. Save a
+> known-good boot/rootfs and prepare rollback first. If the phone fails to boot
+> after writing, restore the saved image through recovery.
+
 > **Warning.** This is an archived 2019 downstream port using Linux 3.4, not a mainline kernel. Installation is experimental, erases Android and its data, and can leave the phone unbootable. Continue only if you accept data loss and know how to restore the device.
 
 ## Contents

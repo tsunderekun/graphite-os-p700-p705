@@ -1,5 +1,12 @@
 # APPS-RESEARCH - built-in graphite shell applications: audit, market, implementation
 
+> **Status, 26 Nov 2026:** this 24 Nov audit is no longer an accurate description
+> of the current code. Files now opens `.txt/.fb2/.fb2.zip` in Reader and
+> `.png/.jpg/.jpeg` in the viewer; unsupported types get an explicit message.
+> Reader supports EPUB 2/3. Viewer and clock/timer passed host tests but have not
+> yet been run on the phone. Treat the priority tables below as historical
+> research, not as a list of missing features.
+
 > Date: 24.11.2026. The device was not changed: no code was edited, and nothing was run or installed on the phone. Packages and sizes are from
 > documented project audits (`READER-PLAN.md`, `VIDEO-PLAN.md`,
 > `PLAYER-FEATURES.md`) and the Alpine edge/armv7 index as of the document date.
@@ -8,6 +15,16 @@
 > only reduced to P0), `READER-PLAN.md`, `VIDEO-PLAN.md`,
 > `APP-INTEGRATION-PLAN.md`, `SETTINGS-SPEC.md`, `notes/shell/SCREENS.md`,
 > `SHELL-TODO.md`, `METRO-RESEARCH.md`.
+
+## Current state (26 Nov 2026)
+
+This 24 Nov audit is a historical snapshot, not a list of current gaps. Files
+opens `.txt/.fb2/.fb2.zip` in Reader and `.png/.jpg/.jpeg` in the viewer;
+unsupported types get an explicit no-app message. EPUB 2/3 is implemented in
+Reader. Viewer and clock/timer passed host tests but have not yet run on the
+phone. The viewer displays wide photos in landscape orientation. The timer has
+1/5/10/15-minute presets, pause, reset and ±1-minute adjustment; it has no sound
+alert or background operation.
 
 ---
 

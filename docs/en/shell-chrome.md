@@ -1,13 +1,13 @@
 # Notifications and Task Switching
 
-This document describes the plan for notifications, the quick settings panel, and the external application task switcher. P0/P1/P2 priorities and verification criteria are preserved from the plan.
+Snapshot, 26 Nov 2026: apphost has two task slots (one foreground); long-press Home opens Tasks, short Home minimizes, and Back closes. The shade has DND, an unread count, Clear, up to three cards and `+N`. The in-memory queue holds up to 32 entries; there is no persistent history. Apphost reports launch errors and abnormal exits, but background-task events are not connected.
 
 ## 0. Summary
 
 1. **Notifications are 95% internal shell events** (MPD, Wi-Fi, battery, application launch/crash, QA). Therefore, the queue owner is the shell itself (`src/notify.cpp`), with no daemon. The P0 external input is a file queue in tmpfs; Unix socket and D-Bus are only needed when an actual client appears.
 2. **The shade becomes a full-screen notification center**: 5 tiles, 2 sliders, a list of 432×76 cards (5 visible + “MORE N”), “CLEAR”, and a DND tile. MPD and Wi-Fi move from hard-coded `draw()` to ongoing notifications—the same appearance, but with deduplication, updates, and a unified list.
 3. **A banner over another application is impossible in the current architecture**: the shell is one full-screen window *under* the application window. At P0, events are shown in the status-bar strip (not covered by the application)—icon + count + 5-second ticker. A full 480×64 heads-up is a separate override-redirect window with an empty input-shape (P1, `-lXext`).
-4. **The task shade requires a multitasking apphost, not screenshots**: currently `apphost.cpp` holds exactly one `g_pid`/`g_win`, and Home calls `apphost_close()`—that is, it kills the application. First refactor to 3–4 tasks with `suspend/resume`, then UI.
+4. **Tasks use two apphost slots** (`Task[2]`): one task is foreground and another may be in the background. There are no previews, background work, or notifications from hidden tasks.
 5. **A 240×400 screenshot costs 187.5 KiB and is captured once**—when the window is still visible (before unmap). `XGetImage` cannot be taken from an already closed/covered window: contents are undefined. This addresses the objection in `METRO-RESEARCH.md` §4.7.
 6. **Home no longer kills anything**: short Home = minimize (unmap), Back = close (WM_DELETE → TERM → KILL), long Home ≥650 ms = tasks. This is the key contract; without it, the switcher is pointless.
 
@@ -18,15 +18,15 @@ This document describes the plan for notifications, the quick settings panel, an
 | Layer | Fact | Implication for the plan |
 |---|---|---|
 | Shell | one process, one 480×800 override-redirect window, `XPutImage`, no WM | shade/lock/tasks are shown after the application is unmapped (suspend), not over it; a banner over it requires a separate window |
-| apphost | one `g_pid`, one `g_win`, `apphost_launch` rejects a second application | an array of tasks and partial API refactor are needed |
-| Home | in `app.cpp`, with an active application: `apphost_close(); open("home")` | Home kills the application; this must be rewritten |
-| Long Home | 700 ms → `push("shade")` | change to 650 ms → `push("tasks")` |
-| Shade | panel 470, 4 tiles, 2 sliders, 2 cards (MPD/Wi-Fi) hard-coded | no new notifications; a list and model are needed |
+| apphost | two `Task[2]` slots | one foreground task; a second may remain in the background |
+| Home | short Home minimizes; Back closes | long Home opens Tasks |
+| Long Home | 650 ms → `push("tasks")` | two-slot task screen |
+| Shade | DND, unread count, up to 3 cards and `+N` | in-memory queue, no history |
 | D-Bus | session bus starts lazily on the first `apphost_launch`, uid 10000, address in `/tmp/dbus-graphite.address` | no notification clients; a custom service is not worthwhile |
 | Memory | 400 MB, ~182 MB used, `MemAvailable` critical threshold 40 MB | limit to 3–4 tasks, previews < 1 MB, no extra processes |
 | Screen | 480×800, RGB565, 1 GHz, no GPU, no animations | no slides/fades; redraw on event |
 | Keys | Back/Home/Menu/Search from event0, Home also from event1, Power from event5 | Home arrives twice; 120 ms deduplication already exists; one long-press timer |
-| Lock screen | `lock.cpp`: tap and swipe up unlock; Home from lock screen also goes to home | separate security issue (PIN—P2), not changed in this plan but noted |
+| Lock screen | 4–8 digit PIN, salted verifier, attempt limit | access barrier, not encryption |
 
 ### 1.1. Three document contradictions and their resolution
 

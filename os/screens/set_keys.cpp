@@ -59,10 +59,13 @@ struct SetKeys : ScreenView {
     void on_show() override { refresh(); }
 
     const char *id() const override { return "set-keys"; }
+    bool scrollable() const override { return true; }
+    int content_height(int) const override { return 760; }
 
     void draw(Gfx &g) override {
         ui_bg(g);
         ui_header(g, "Клавиши", "VOL · POWER · HOME · MENU", true);
+        g.begin_body(96, 760, scroll_y);
         int y = 96;
         y = ui_section(g, y, "ПОДСВЕТКА");
 
@@ -94,6 +97,7 @@ struct SetKeys : ScreenView {
 
         y = note(g, y, "/sys/class/leds/button-backlight · 0…255");
 
+        g.end_body();
         g.text(24, 781, "КЛАВИШИ · EVDEV", 11, theme.dim);
         g.text(456, 781, "event0/1/5", 11, theme.dim, TF_RIGHT);
     }
@@ -115,7 +119,8 @@ struct SetKeys : ScreenView {
         }
         on = want;
         seen = want ? 255 : 0;
-        settings_save_key("btnlight", want ? "on" : "off");
+        if (!settings_save_key("btnlight", want ? "on" : "off"))
+            app.toast("Подсветка изменена, но настройки не сохранены");
         app.toast(want ? "Подсветка кнопок: 255" : "Подсветка кнопок: 0");
         return true;
     }

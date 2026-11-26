@@ -1,6 +1,12 @@
 #include "graphite.h"
-#include <cstdlib>
+#include <cerrno>
+#include <csignal>
+#include <cstdio>
 #include <cstring>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 namespace {
 
@@ -9,81 +15,102 @@ bool hit(int x, int y, int rx, int ry, int rw, int rh) {
 }
 
 struct Power : ScreenView {
-    // Absolute monotonic deadlines (ms). 0 = not armed.
-    unsigned arm_power = 0, arm_reboot = 0;
+    enum Action { NONE, POWER_OFF, REBOOT } action = NONE;
+    enum State { IDLE, CONFIRM, STARTING, FAILED } state = IDLE;
+    unsigned deadline = 0;
+    pid_t helper = -1;
+    int result_fd = -1;
+    char error[96] = {};
 
     const char *id() const override { return "power"; }
 
     void draw(Gfx &g) override {
         ui_bg(g);
         for (int y = 0; y < 800; y++)
-            for (int x = 0; x < 480; x++)
-                g.cv.blend(x, y, 0, 189);   // 74 % scrim
+            for (int x = 0; x < 480; x++) g.cv.blend(x, y, 0, 189);
+        g.rect(32, 250, 416, 300, theme.surf);
+        g.text(52, 272, state == STARTING ? "Завершение работы" : "Питание", 20, theme.fg, TF_LIGHT);
+        g.text(52, 306, "Несохранённые данные могут быть потеряны.", 13, theme.dim);
 
-        g.rect(40, 280, 400, 220, theme.surf);
-        g.text(60, 300, "Выключить питание?", 20, theme.fg, TF_LIGHT);
+        const char *power_label = state == CONFIRM && action == POWER_OFF ? "Подтвердить выключение" : "Выключить…";
+        const char *reboot_label = state == CONFIRM && action == REBOOT ? "Подтвердить перезагрузку" : "Перезагрузить";
+        g.rect(52, 344, 376, 56, theme.surf2);
+        g.text(68, 363, power_label, 15, action == POWER_OFF && state == CONFIRM ? theme.accent : theme.fg);
+        g.rect(52, 410, 376, 56, theme.surf2);
+        g.text(68, 429, reboot_label, 15, action == REBOOT && state == CONFIRM ? theme.accent : theme.fg);
+        g.rect(52, 476, 376, 56, theme.surf2);
+        g.text(68, 495, state == FAILED ? "Закрыть сообщение" : "Отмена", 15, theme.dim);
+        if (state == CONFIRM) g.text(52, 580, "Нажмите выбранное действие ещё раз", 13, theme.accent);
+        if (state == STARTING) g.text(52, 580, "Останавливаем звук и синхронизируем…", 13, theme.accent);
+        if (state == FAILED) g.text(52, 580, error, 13, theme.accent);
+    }
 
-        g.text(60, 332, g.fit("Все несохранённые данные будут потеряны при", 13, 360),
-               13, theme.dim);
-        g.text(60, 352, "завершении работы.", 13, theme.dim);
+    void launch() {
+        int p[2];
+        if (pipe2(p, O_CLOEXEC | O_NONBLOCK) != 0) { fail("Не удалось создать канал helper"); return; }
+        helper = fork();
+        if (helper == 0) {
+            close(p[0]);
+            dup2(p[1], STDOUT_FILENO);
+            execl("/usr/local/bin/lg-reboot", "lg-reboot", action == POWER_OFF ? "poweroff" : "normal", (char *)nullptr);
+            dprintf(p[1], "helper exec: %s", strerror(errno));
+            _exit(127);
+        }
+        close(p[1]);
+        if (helper < 0) { close(p[0]); helper = -1; fail("Не удалось запустить helper"); return; }
+        result_fd = p[0];
+        state = STARTING;
+        deadline = app.now + 12000;
+    }
 
-        const char *plabel = arm_power ? "Нажмите ещё раз" : "Выключить…";
-        int pr = 420, py = 466;
-        int pw = g.textw(plabel, 14);
-        int cr = pr - pw - 24;
-
-        g.text(cr, py, "Отмена", 14, theme.dim, TF_RIGHT);
-        g.text(pr, py, plabel, 14, theme.accent, TF_RIGHT);
-
-        // reboot row under the dialog
-        g.rect(40, 520, 400, 56, theme.surf);
-        icon(g, "restart", 60, 537, 22, theme.dim);
-        g.text(92, 538,
-               arm_reboot ? "Нажмите ещё раз" : "Перезагрузить", 14,
-               arm_reboot ? theme.accent : theme.fg);
+    void fail(const char *msg) {
+        state = FAILED;
+        std::snprintf(error, sizeof(error), "%s", msg);
+        action = NONE;
     }
 
     bool tap(int x, int y) override {
-        const char *plabel = arm_power ? "Нажмите ещё раз" : "Выключить…";
-        Gfx &g = *app.g;
-        int pw = g.textw(plabel, 14);
-        int cw = g.textw("Отмена", 14);
-        int pr = 420;
-        int cr = pr - pw - 24;
-
-        if (hit(x, y, cr - cw - 10, 452, cw + 20, 44)) {
-            app.back();
+        if (hit(x, y, 52, 344, 376, 56)) {
+            if (state == STARTING) return true;
+            if (state == CONFIRM && action == POWER_OFF) launch();
+            else { state = CONFIRM; action = POWER_OFF; deadline = app.now + 3000; }
             return true;
         }
-        if (hit(x, y, pr - pw - 10, 452, pw + 20, 44)) {
-            if (arm_power && app.now < arm_power) {
-                arm_power = 0;
-                int rc = std::system("poweroff");
-                (void)rc;
-            } else {
-                arm_power = app.now + 3000;
-            }
+        if (hit(x, y, 52, 410, 376, 56)) {
+            if (state == STARTING) return true;
+            if (state == CONFIRM && action == REBOOT) launch();
+            else { state = CONFIRM; action = REBOOT; deadline = app.now + 3000; }
             return true;
         }
-        if (hit(x, y, 40, 520, 400, 56)) {
-            if (arm_reboot && app.now < arm_reboot) {
-                arm_reboot = 0;
-                int rc = std::system("reboot");
-                (void)rc;
-            } else {
-                arm_reboot = app.now + 3000;
-            }
+        if (hit(x, y, 52, 476, 376, 56)) {
+            if (state == FAILED) { state = IDLE; error[0] = 0; }
+            else if (state != STARTING) { state = IDLE; action = NONE; }
             return true;
         }
         return false;
     }
 
     void tick(unsigned now) override {
-        if (arm_power && now >= arm_power) arm_power = 0;
-        if (arm_reboot && now >= arm_reboot) arm_reboot = 0;
+        if (state == CONFIRM && now >= deadline) { state = IDLE; action = NONE; }
+        if (state != STARTING) return;
+        char buf[96];
+        ssize_t n = read(result_fd, buf, sizeof(buf) - 1);
+        if (n > 0) { buf[n] = 0; fail(buf); }
+        int status = 0;
+        pid_t r = waitpid(helper, &status, WNOHANG);
+        if (r == helper) {
+            helper = -1;
+            if (result_fd >= 0) { close(result_fd); result_fd = -1; }
+            if (state == STARTING) fail("Команда завершилась без reboot/poweroff");
+        } else if (now >= deadline) {
+            if (helper > 0) { kill(helper, SIGKILL); waitpid(helper, nullptr, 0); helper = -1; }
+            if (result_fd >= 0) { close(result_fd); result_fd = -1; }
+            fail("Таймаут: переход не выполнен");
+        }
     }
 
-    bool animated() const override { return arm_power != 0 || arm_reboot != 0; }
+    bool animated() const override { return state == CONFIRM || state == STARTING; }
+    ~Power() override { if (result_fd >= 0) close(result_fd); }
 };
 
 } // namespace

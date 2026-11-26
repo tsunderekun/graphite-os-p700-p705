@@ -1,8 +1,11 @@
 #include "graphite.h"
 #include "mpd.h"
+#include "power_policy.h"
+#include "lock_auth.h"
 
 #include <cstdio>
 #include <ctime>
+#include <algorithm>
 #include <string>
 
 namespace {
@@ -77,6 +80,8 @@ void chevron_up(Gfx &g, int cx, int top, int half, uint16_t c) {
 
 struct Lock : ScreenView {
     int up = 0;
+    std::string pin;
+    lock_auth::AttemptLimiter limiter;
     MpdClient *mpd = nullptr;
 
     Lock() {
@@ -85,12 +90,22 @@ struct Lock : ScreenView {
     }
 
     const char *id() const override { return "lock"; }
-    bool animated() const override { return true; }
+    bool animated() const override { return false; }
 
     void tick(unsigned now) override { mpd->tick(now); }
 
     void draw(Gfx &g) override {
         ui_bg(g);
+
+        if (lock_auth::enabled()) {
+            g.text(240, 118, "Введите PIN", 22, theme.fg, TF_CENTER);
+            for (int i=0;i<(int)pin.size();i++) g.rect(240-((int)pin.size()-1)*18/2+i*18-4, 186, 8, 8, theme.accent);
+            const char *keys[]={"1","2","3","4","5","6","7","8","9","⌫","0","OK"};
+            for(int i=0;i<12;i++){int x=42+(i%3)*132,y=244+(i/3)*82;g.rect(x,y,112,60,theme.surf);g.text(x+56,y+18,keys[i],20,theme.fg,TF_CENTER);}
+            if (limiter.blocked(app.now)) g.text(240, 610, "Слишком много попыток · подождите", 14, theme.accent, TF_CENTER);
+            g.text(240, 726, "ЛОКИРОВКА PIN · ТОЛЬКО БАРЬЕР ВХОДА", 11, theme.dim, TF_CENTER);
+            return;
+        }
 
         g.text(240, 274, now_hm(), 76, theme.fg, TF_CENTER | TF_LIGHT);
         g.text(240, 372, now_date(), 14, theme.dim, TF_CENTER);
@@ -114,22 +129,42 @@ struct Lock : ScreenView {
     }
 
     bool tap(int x, int y) override {
+        if (lock_auth::enabled()) {
+            if (limiter.blocked(app.now)) return true;
+            if (y >= 244 && y < 550) {
+                int col=(x-42)/132,row=(y-244)/82;
+                if(x<42||col<0||col>2||row<0||row>3)return true;
+                int idx=row*3+col;
+                if(idx==9){if(!pin.empty())pin.pop_back();}
+                else if(idx==11){if(lock_auth::verify(pin)==lock_auth::Result::Ok){limiter.success();pin.clear();if(power_policy.wake(app.now))app.open("home");else app.toast("Ошибка записи подсветки");}else{pin.clear();limiter.reject(app.now);}}
+                else if(pin.size()<8){int digit=idx==10?0:idx+1;pin.push_back(char('0'+digit));}
+            }
+            return true;
+        }
         (void)x; (void)y;
         up = 0;
+        if (!power_policy.wake(app.now)) { app.toast("Ошибка записи подсветки"); return true; }
         app.open("home");
         return true;
     }
 
     bool drag(int x, int y, int dx, int dy) override {
+        if (lock_auth::enabled()) return true;
         (void)x; (void)y; (void)dx;
         if (dy > 0) up = 0;
         else up += dy;
         if (up <= -20) {
             up = 0;
+            if (!power_policy.wake(app.now)) { app.toast("Ошибка записи подсветки"); return true; }
             app.open("home");
             return true;
         }
         return false;
+    }
+
+    bool key(int ksym, bool down) override {
+        (void)ksym; (void)down;
+        return lock_auth::enabled();
     }
 };
 

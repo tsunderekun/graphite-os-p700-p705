@@ -191,23 +191,26 @@ struct Power : ScreenView {
             : "—";
         kv(g, 124, "БАТАРЕЯ",
            pwr.known ? batt + " · " + pwr.volt : "—", !pwr.known, true);
-        kv(g, 168, "ИСТОЧНИК",
+        kv(g, 180, "ИСТОЧНИК",
            pwr.known ? pwr.source + " · " + pwr.ma : "—", !pwr.known, false);
-        kv(g, 212, "ТОК ЗАРЯДА", "нет датчика", true, false);
-        kv(g, 256, "ТЕМПЕРАТУРА", "нет датчика", true, false);
+        kv(g, 236, "ДАТЧИКИ", "тока и температуры нет", true, false);
 
-        section(g, 300, "СИСТЕМА");
-        kv(g, 328, "ЧАСТОТА", freq, freq == "—", true);
-        kv(g, 372, "GOVERNOR", gov, gov == "—", false);
-        kv(g, 416, "ЗАГРУЗКА", load, load == "—", false);
-        kv(g, 460, "ПАМЯТЬ · СВОБОДНО", mem, mem == "—", false);
+        section(g, 292, "СИСТЕМА");
+        kv(g, 320, "ЧАСТОТА", freq, freq == "—", true);
+        kv(g, 376, "GOVERNOR", gov, gov == "—", false);
+        kv(g, 432, "ЗАГРУЗКА", load, load == "—", false);
+        kv(g, 488, "ПАМЯТЬ · СВОБОДНО", mem, mem == "—", false);
 
-        section(g, 504, "ДЕЙСТВИЯ");
-        button(g, 532, "ЗАБЛОКИРОВАТЬ СЕЙЧАС");
-        button(g, 588, "ВЫКЛЮЧИТЬ…");
+        section(g, 544, "ДЕЙСТВИЯ");
+        button(g, 572, "ЗАБЛОКИРОВАТЬ СЕЙЧАС");
+        button(g, 628, "ВЫКЛЮЧИТЬ…");
 
-        kv(g, 654, "СОН", "нет wakeup", true, true);
-        kv(g, 698, "РИСК", "пики на 500 мА → ребут", false, false);
+        // Two long-standing caveats, as notes instead of two more 56 px rows:
+        // the screen has no room left for rows above the footer.
+        g.text(24, 692, "Сон не подтверждён: wakeup-источников нет",
+               11, theme.dim);
+        g.text(24, 712, "Пики тока до 500 мА могут привести к ребуту",
+               11, theme.dim);
 
         std::string foot = !pwr.known ? "ПИТАНИЕ · нет данных"
                          : (pwr.battery ? "ПИТАНИЕ · АКБ" : "ПИТАНИЕ · без АКБ");
@@ -219,19 +222,11 @@ struct Power : ScreenView {
     bool tap(int x, int y) override {
         if (hit(x, y, 0, 32, 64, 64)) { app.back(); return true; }
 
-        if (hit(x, y, 0, 532, 480, 48)) { app.open("lock"); return true; }
-        if (hit(x, y, 0, 588, 480, 48)) { app.open("power"); return true; }
+        if (hit(x, y, 0, 572, 480, 48)) { app.open("lock"); return true; }
+        if (hit(x, y, 0, 628, 480, 48)) { app.open("power"); return true; }
 
-        if (hit(x, y, 0, 212, 480, 44)) {
-            app.toast("Нет current_now: датчика тока нет");
-            return true;
-        }
-        if (hit(x, y, 0, 256, 480, 44)) {
-            app.toast("batt_therm — константа, CONFIG_THERMAL=n");
-            return true;
-        }
-        if (hit(x, y, 0, 654, 480, 44)) {
-            app.toast("Нет wakeup-источников: после suspend не разбудить");
+        if (hit(x, y, 0, 236, 480, 56)) {
+            app.toast("Нет current_now и batt_therm: датчиков тока и температуры нет");
             return true;
         }
         return false;

@@ -113,15 +113,21 @@ std::vector<AppItem> scan_desktop() {
 std::string mem_text() {
     FILE *f = std::fopen("/proc/meminfo", "r");
     if (!f) return "нет /proc/meminfo";
-    unsigned long long total = 0, avail = 0;
+    // This kernel (3.4) has no MemAvailable, so fall back to the same
+    // Free+Buffers+Cached estimate the apphost admission check uses.
+    unsigned long long total = 0, avail = 0, free_kb = 0, buffers = 0, cached = 0;
     char line[256];
     while (std::fgets(line, sizeof(line), f)) {
         unsigned long long v = 0;
         if (std::sscanf(line, "MemTotal: %llu kB", &v) == 1) total = v;
         else if (std::sscanf(line, "MemAvailable: %llu kB", &v) == 1) avail = v;
+        else if (std::sscanf(line, "MemFree: %llu kB", &v) == 1) free_kb = v;
+        else if (std::sscanf(line, "Buffers: %llu kB", &v) == 1) buffers = v;
+        else if (std::sscanf(line, "Cached: %llu kB", &v) == 1) cached = v;
     }
     std::fclose(f);
     if (!total) return "нет данных";
+    if (!avail) avail = free_kb + buffers + cached;
     char buf[64];
     std::snprintf(buf, sizeof(buf), "%llu / %llu МБ свободно",
                   avail / 1024ULL, total / 1024ULL);
@@ -157,7 +163,7 @@ struct SetApps : ScreenView {
     void draw(Gfx &g) override {
         ui_bg(g);
         std::string sub = std::to_string((long long)total) + " " + plural_apps(total);
-        ui_header(g, "Приложения", sub.c_str(), true);
+        ui_header(g, "Каталог приложений", sub.c_str(), true);
         int y = 96;
         ui_section(g, y, "ВСЕ");
         std::string cnt = std::to_string((long long)items.size());
@@ -181,6 +187,7 @@ struct SetApps : ScreenView {
             y += 56;
         }
 
+        y += 8;
         int pin = (int)gpins::list().size();
         std::string pl = std::to_string(pin) + " закреплено на Пуске";
         g.hline(0, y, g.cv.w, theme.line2);
@@ -194,11 +201,11 @@ struct SetApps : ScreenView {
         y += 44;
 
         if (y + 24 <= 770)
-            g.text(24, y + 6, "строки из /usr/share/applications · тап — Приложения",
+            g.text(24, y + 6, "только просмотр · запуск и закрепление не реализованы",
                    11, theme.dim);
 
         g.text(24, 781, "ПРИЛОЖЕНИЯ · .DESKTOP", 11, theme.dim);
-        g.text(456, 781, "плитки Пуска", 11, theme.dim, TF_RIGHT);
+        g.text(456, 781, "только просмотр", 11, theme.dim, TF_RIGHT);
     }
 
     bool tap(int x, int y) override {

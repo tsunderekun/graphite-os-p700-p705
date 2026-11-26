@@ -3,14 +3,15 @@
 // notification cards show the MPD track and the actual wlan0 link.
 #include "graphite.h"
 #include "mpd.h"
+#include "notify.h"
 
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
-#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <fcntl.h>
+#include <glob.h>
 #include <string>
 #include <unistd.h>
 #include <ifaddrs.h>
@@ -23,7 +24,7 @@ const int TX0 = 24, TY = 74, TW = 102, TH = 84, TGAP = 8;
 const int SLX = 24, SLW = 432;
 const int VOL_Y = 168, BRI_Y = 216;       // slider label y (track at +26)
 const int CARD_Y = 270, CARD_H = 64, CARD_GAP = 8;
-const int PANEL_H = 470;
+const int NOTICE_Y = 306, NOTICE_H = 44, NOTICE_STEP = 48, NOTICE_MAX = 3;
 
 bool hit(int x, int y, int rx, int ry, int rw, int rh) {
     return x >= rx && x < rx + rw && y >= ry && y < ry + rh;
@@ -50,37 +51,6 @@ std::string now_date() {
     std::snprintf(b, sizeof(b), "%s, %d %s", wd[tmv.tm_wday], tmv.tm_mday,
                   mo[tmv.tm_mon]);
     return std::string(b);
-}
-
-std::string fmt_time(int sec) {
-    if (sec < 0) sec = 0;
-    int h = sec / 3600;
-    int m = (sec / 60) % 60;
-    int s = sec % 60;
-    char b[24];
-    if (h > 0) std::snprintf(b, sizeof(b), "%d:%02d:%02d", h, m, s);
-    else std::snprintf(b, sizeof(b), "%d:%02d", m, s);
-    return b;
-}
-
-std::string base_name(const std::string &path) {
-    size_t slash = path.find_last_of('/');
-    std::string name = slash == std::string::npos ? path : path.substr(slash + 1);
-    size_t dot = name.find_last_of('.');
-    if (dot != std::string::npos && dot > 0) name = name.substr(0, dot);
-    return name;
-}
-
-std::string song_title(const MpdSong &s) {
-    if (!s.title.empty()) return s.title;
-    std::string n = base_name(s.file);
-    return n.empty() ? "Без названия" : n;
-}
-
-std::string song_state(const MpdStatus &st) {
-    if (st.state == "play") return "играет";
-    if (st.state == "pause") return "пауза";
-    return "остановлен";
 }
 
 // ---------------------------------------------------------------- settings
@@ -133,26 +103,27 @@ std::string read_ssid() {
     }
     if (!s.empty()) return s;
 
-    const char *paths[] = {
-        "/etc/wpa_supplicant/wpa_supplicant.conf",
-        "/etc/wpa_supplicant.conf",
-    };
-    for (const char *path : paths) {
-        FILE *f = std::fopen(path, "rb");
-        if (!f) continue;
-        char line[256];
-        while (std::fgets(line, sizeof(line), f)) {
-            char *q = std::strstr(line, "ssid=\"");
-            if (!q) continue;
-            q += 6;
-            char *e = std::strchr(q, '"');
-            if (e) *e = 0;
+    glob_t g{};
+    std::string found;
+    if (glob("/etc/wpa_supplicant*.conf", 0, nullptr, &g) == 0) {
+        for (size_t gi = 0; gi < g.gl_pathc && found.empty(); ++gi) {
+            FILE *f = std::fopen(g.gl_pathv[gi], "rb");
+            if (!f) continue;
+            char line[256];
+            while (std::fgets(line, sizeof(line), f)) {
+                char *q = std::strstr(line, "ssid=\"");
+                if (!q) continue;
+                q += 6;
+                char *e = std::strchr(q, '"');
+                if (e) *e = 0;
+                found = q;
+                break;
+            }
             std::fclose(f);
-            return q;
         }
-        std::fclose(f);
+        globfree(&g);
     }
-    return std::string();
+    return found;
 }
 
 std::string read_ip() {
@@ -204,6 +175,24 @@ struct Shade : ScreenView {
         mpd = &mpd_client();
         mpd->set_queue_watch(false);
         prev_vol = 60;
+        // Host-only visual fixture; absent from normal/device launches.
+        if (const char *demo = std::getenv("GRAPHITE_SHADE_DEMO")) {
+            char *end = nullptr;
+            long requested = std::strtol(demo, &end, 10);
+            int amount = end != demo && *end == '\0'
+                ? static_cast<int>(std::max(0L, std::min(32L, requested))) : 0;
+            for (int i = 0; i < amount; ++i) {
+                char key[16], title[64], body[96];
+                std::snprintf(key, sizeof(key), "demo-%d", i + 1);
+                std::snprintf(title, sizeof(title), "Демо уведомление %d", i + 1);
+                std::snprintf(body, sizeof(body), "Проверка карточки списка №%d", i + 1);
+                NotifySpec spec{"shade-demo", key, title, body, 0, N_NORMAL, false};
+                notify_push(spec);
+            }
+            if (std::getenv("GRAPHITE_SHADE_DEMO_DND") &&
+                std::strcmp(std::getenv("GRAPHITE_SHADE_DEMO_DND"), "1") == 0)
+                notify_set_dnd(true);
+        }
     }
 
     const char *id() const override { return "shade"; }
@@ -223,6 +212,7 @@ struct Shade : ScreenView {
         }
         bright_pending = false;
         drag_dy = 0;
+        notify_mark_all_read();
     }
 
     void tick(unsigned now) override {
@@ -255,6 +245,16 @@ struct Shade : ScreenView {
     bool has_track() const { return mpd->connected() && mpd->has_song(); }
     bool has_wifi_card() const {
         return wifi && (net.iface || !net.ssid.empty() || !net.ip.empty());
+    }
+
+    int shown_notifications(int count) const {
+        return std::min(count, NOTICE_MAX);
+    }
+
+    int panel_h() const {
+        int shown = shown_notifications(notify_list(nullptr));
+        int rows = std::max(1, shown);
+        return NOTICE_Y + rows * NOTICE_STEP + 30;
     }
 
     // ------------------------------------------------------------ actions
@@ -360,13 +360,14 @@ struct Shade : ScreenView {
     }
 
     void draw(Gfx &g) override {
+        const int panel_height = panel_h();
         // the home screen below is drawn by App because overlay() is true
         for (int y = 0; y < 800; y++)
             for (int x = 0; x < 480; x++)
                 g.cv.blend(x, y, 0, 150);
 
-        g.rect(0, 0, 480, PANEL_H, theme.bg);
-        for (int y = 12; y < PANEL_H; y += 24)
+        g.rect(0, 0, 480, panel_height, theme.bg);
+        for (int y = 12; y < panel_height; y += 24)
             for (int x = 0; x < 480; x++)
                 g.cv.blend(x, y, theme.surf2, 20);
 
@@ -399,41 +400,29 @@ struct Shade : ScreenView {
             draw_slider(g, BRI_Y, 0, "ЯРКОСТЬ", "—");
         }
 
-        // notification cards: the MPD track and the real wlan0 link
-        int y = CARD_Y;
-        bool any = false;
-
-        if (has_track()) {
-            const MpdSong &s = mpd->song();
-            const MpdStatus &st = mpd->status();
-            std::string sub = s.artist.empty() ? song_state(st)
-                                               : s.artist + " · " + song_state(st);
-            double dur = st.duration > 0 ? st.duration : s.time;
-            double el = mpd->elapsed(app.now);
-            std::string right = fmt_time((int)el);
-            if (dur > 0) right += " / " + fmt_time((int)(dur + 0.5));
-            draw_card(g, y, song_title(s), sub, right);
-            y += CARD_H + CARD_GAP;
-            any = true;
+        g.text(24, 272, "УВЕДОМЛЕНИЯ", 12, theme.fg, TF_BOLD);
+        g.rect(220, 256, 112, 44, notify_dnd() ? theme.accent : theme.surf);
+        g.text(276, 272, notify_dnd() ? "DND ВКЛ" : "DND ВЫКЛ", 11,
+               notify_dnd() ? theme.onacc : theme.fg, TF_CENTER | TF_BOLD);
+        const NotifyItem *list = nullptr;
+        int n = notify_list(&list);
+        if (n > NOTICE_MAX)
+            g.text(212, 272, "+" + std::to_string(n - NOTICE_MAX), 11, theme.dim, TF_RIGHT);
+        g.rect(340, 256, 116, 44, n ? theme.surf : theme.bg);
+        g.text(398, 272, "ОЧИСТИТЬ", 11, n ? theme.fg : theme.dim, TF_CENTER | TF_BOLD);
+        const int shown = shown_notifications(n);
+        for (int i = 0; i < shown; ++i) {
+            const NotifyItem &it = list[i];
+            int y = NOTICE_Y + i * NOTICE_STEP;
+            g.rect(SLX, y, SLW, 44, theme.surf);
+            if (it.ongoing || it.unread) g.rect(SLX, y, 3, 44,
+                it.ongoing ? theme.dim : theme.accent);
+            g.text(SLX + 16, y + 6, g.fit(it.title, 12, 390), 12, theme.fg, TF_BOLD);
+            if (it.text[0]) g.text(SLX + 16, y + 25, g.fit(it.text, 11, 390), 11, theme.dim);
         }
-
-        if (has_wifi_card()) {
-            std::string title = net.ssid.empty() ? "Wi-Fi" : net.ssid;
-            std::string right = net.ip.empty() ? "нет IP" : "подключено";
-            std::string sub = net.ip.empty() ? "Wi-Fi · нет IP"
-                                             : "Wi-Fi · " + net.ip;
-            draw_card(g, y, title, sub, right);
-            y += CARD_H + CARD_GAP;
-            any = true;
-        }
-
-        if (!any) {
-            g.text(240, CARD_Y + 24, "Нет уведомлений", 11, theme.dim,
-                   TF_CENTER);
-        }
-
+        if (!shown) g.text(240, panel_height - 44, "Нет уведомлений", 12, theme.dim, TF_CENTER);
         // grab handle
-        g.rect(180, 452, 120, 4, theme.line);
+        g.rect(180, panel_height - 18, 120, 4, theme.line);
     }
 
     // ------------------------------------------------------------ input
@@ -441,7 +430,30 @@ struct Shade : ScreenView {
     bool tap(int x, int y) override {
         drag_dy = 0;
 
-        if (y >= PANEL_H) { app.back(); return true; }
+        if (y >= panel_h()) { app.back(); return true; }
+        if (hit(x, y, 340, 256, 116, 44)) {
+            int before = notify_list(nullptr);
+            if (before > 0) {
+                notify_clear();
+                int after = notify_list(nullptr);
+                if (after == before) app.toast("Активные уведомления остаются");
+                app.invalidate();
+            }
+            return true;
+        }
+        if (hit(x, y, 220, 256, 112, 44)) { notify_set_dnd(!notify_dnd()); app.invalidate(); return true; }
+        if (x >= SLX && x < SLX + SLW && y >= NOTICE_Y && y < NOTICE_Y + NOTICE_MAX * NOTICE_STEP) {
+            const NotifyItem *list = nullptr;
+            int n = notify_list(&list);
+            int row = (y - NOTICE_Y) / NOTICE_STEP;
+            int shown = shown_notifications(n);
+            if (row < shown && y - (NOTICE_Y + row * NOTICE_STEP) < NOTICE_H) {
+                if (!notify_dismiss(list[row].id))
+                    app.toast("Текущее уведомление нельзя закрыть");
+                app.invalidate();
+                return true;
+            }
+        }
         if (hit(x, y, 428, 32, 44, 44)) { app.open("set-root"); return true; }
 
         for (int i = 0; i < 4; i++) {

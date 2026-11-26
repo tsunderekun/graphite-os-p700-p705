@@ -85,7 +85,7 @@ struct Browser : ScreenView {
 
     void on_show() override {
         present = exe_present("dillo");
-        if (present && !apphost_active()) apphost_launch(kDilloCmd);
+        if (present && !apphost_is_browser()) apphost_launch(kDilloCmd);
     }
 
     void draw(Gfx &g) override {
@@ -135,15 +135,9 @@ struct Browser : ScreenView {
             return true;
         }
         if (hit(x, y, 24, kButtonY, 432, 56)) {
-            if (!present) {
-                apphost_launch(kXtermCmd);
-            } else if (apphost_active() && apphost_is_browser()) {
-                apphost_focus_app();
-            } else if (!apphost_active()) {
-                apphost_launch(kDilloCmd);
-            } else {
-                app.toast("Уже открыто приложение");
-            }
+            // apphost_launch resumes an existing task for the same command and
+            // only refuses when both slots are busy, so it is the single path.
+            apphost_launch(present ? kDilloCmd : kXtermCmd);
             return true;
         }
         return false;

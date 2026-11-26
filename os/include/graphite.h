@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <X11/Xlib.h>
+#include <X11/extensions/XShm.h>
 
 // ---------------------------------------------------------------- colors
 uint16_t rgb565(int r, int g, int b);
@@ -55,11 +56,14 @@ enum TextFlag {
 
 struct Gfx {
     Canvas &cv;
+    int offset_y = 0, clip_top = 0, clip_bottom = 0;
     explicit Gfx(Canvas &c) : cv(c) {}
-    void rect(int x, int y, int w, int h, uint16_t c) { cv.rect(x, y, w, h, c); }
-    void frame(int x, int y, int w, int h, uint16_t c) { cv.frame(x, y, w, h, c); }
-    void hline(int x, int y, int w, uint16_t c) { cv.hline(x, y, w, c); }
-    void vline(int x, int y, int h, uint16_t c) { cv.vline(x, y, h, c); }
+    void rect(int x, int y, int w, int h, uint16_t c);
+    void frame(int x, int y, int w, int h, uint16_t c);
+    void hline(int x, int y, int w, uint16_t c);
+    void vline(int x, int y, int h, uint16_t c);
+    void begin_body(int top, int bottom, int scroll);
+    void end_body();
     int  text(int x, int y, const std::string &s, int px, uint16_t c, int flags = 0);
     int  textw(const std::string &s, int px, int tracking = 0);
     std::string fit(const std::string &s, int px, int maxw);
@@ -82,6 +86,8 @@ bool settings_save_key(const char *key, const char *value,
 
 // ---------------------------------------------------------------- screens
 struct ScreenView {
+    int scroll_y = 0;
+    void scroll_reset() { scroll_y = 0; }
     virtual ~ScreenView() {}
     virtual const char *id() const = 0;
     virtual void draw(Gfx &g) = 0;
@@ -92,6 +98,11 @@ struct ScreenView {
     virtual void tick(unsigned now) { (void)now; }
     virtual bool animated() const { return false; }
     virtual bool overlay() const { return false; }
+    virtual bool scrollable() const { return false; }
+    virtual int content_height(int viewport_h) const { return viewport_h; }
+    virtual int scroll_top() const { return 96; }
+    virtual int scroll_bottom() const { return 760; }
+    virtual bool scroll_gesture_excluded(int x, int y) const { (void)x; (void)y; return false; }
     virtual void on_show() {}
 };
 
@@ -104,6 +115,8 @@ struct App {
     int depth = 16;
     Canvas *cv = nullptr;
     Gfx *g = nullptr;
+    XShmSegmentInfo shm{};
+    bool shm_ok = false;
     std::vector<ScreenView *> stack;
     std::map<std::string, ScreenView *> cache;
     bool dirty = true;
@@ -116,15 +129,19 @@ struct App {
     unsigned down_at = 0;
     bool long_fired = false;
     bool pulled = false;
+    bool scrolling = false;
     unsigned key_at = 0;
+    unsigned key_time = 0;   // X server timestamp of the press, for a true hold time
     int key_sym = 0;
     bool key_long_fired = false;
     std::string toast_text;
     unsigned toast_until = 0;
     std::string open_path;   // pending file to open in notes (set by files/info)
+    std::string pending_file; // explicit file handoff to reader/viewer
 
     bool init();
     ScreenView *open(const char *id);   // push (home resets the stack)
+    bool open_file(const std::string &path);
     ScreenView *replace(const char *id);// replace the current page (pivots)
     void push(const char *id);
     void back();
@@ -133,6 +150,7 @@ struct App {
     void toast(const char *text, unsigned ms = 2200);
     void render();
     void handle_event(XEvent &ev);
+    void key_long_action(int sym);
     void run();
 };
 extern App app;
@@ -143,6 +161,7 @@ ScreenView *screen_make(const char *id);
 void ui_bg(Gfx &g);
 void ui_status(Gfx &g);
 int  ui_header(Gfx &g, const char *title, const char *sub, bool back);
+extern bool ui_header_back;   // set by ui_header(..., back=true) during draw
 int  ui_section(Gfx &g, int y, const char *label);
 int  ui_row(Gfx &g, int y, const char *name, const char *sub,
             const char *value, bool chevron, bool accent);

@@ -1,4 +1,12 @@
-# SETTINGS-SPEC — LG P700 Settings (graphite shell)
+# SETTINGS-SPEC - LG P700 Settings (graphite shell)
+
+> **Snapshot, 26 Nov 2026:** PIN can be enabled, changed and disabled in Access;
+> the 4–8 digit PIN is stored as a salted verifier with an attempt limit. It is
+> an access barrier, not data encryption. Screen timers offer dim at 10/20/30
+> and lock at 30/60/120 seconds. Long screens scroll their body while header and
+> footer stay fixed; opening a screen resets scroll, Back preserves it. Settings
+> rows use 56 px `ui_row` spacing, buttons are 48 px, and available screens show
+> a back arrow.
 
 > Date: 24.11.2026. This document covers only the information architecture of settings:
 > what is shown, in what order, what is controlled, and where it is located.
@@ -21,7 +29,9 @@
    (856 px, calculation in §3.2). “About phone” is a regular row; the footer is
    only the device caption.
 2. **Of Android’s 11 sections, three are live for us:** screen/appearance, sound, system.
-   Seven items are “planned” (SIM, BT, GPS, PIN, AP, backup, update); many are
+   PIN is implemented in Access (4–8 digits, salted verifier, attempt limit);
+   this is not data encryption. Screen dim/lock timers are available separately.
+   SIM, BT, GPS, AP, backup and update remain unavailable or planned; many items are
    “not needed” (roaming, accounts, DND, font scaling); the rest are “no
    hardware” or “already in the shade.”
 3. **Settings represent device state, not a wish list.** The top has three

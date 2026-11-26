@@ -12,6 +12,7 @@ ScreenView *make_edit();
 
 // shell chrome
 ScreenView *make_shade();
+ScreenView *make_tasks();
 ScreenView *make_lock();
 ScreenView *make_power();
 ScreenView *make_menu();
@@ -23,10 +24,14 @@ ScreenView *make_notes();
 ScreenView *make_browser();
 ScreenView *make_reader();
 ScreenView *make_video();
+ScreenView *make_usb();
+ScreenView *make_viewer();
+ScreenView *make_clock();
 
 // device settings
 ScreenView *make_set_root();
 ScreenView *make_set_display();
+ScreenView *make_set_timers();
 ScreenView *make_set_wifi();
 ScreenView *make_set_keys();
 ScreenView *make_set_sound();

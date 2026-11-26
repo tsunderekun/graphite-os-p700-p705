@@ -5,6 +5,7 @@
 #include "graphite.h"
 #include "mpd.h"
 #include "pins.h"
+#include "apphost.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -167,6 +168,9 @@ static const AppDef kApps[] = {
     {"terminal", "terminal", "Терминал", ""},
     {"set-root", "sliders", "Настройки", ""},
     {"notes", "note", "Заметки", ""},
+    {"reader", "note", "Читалка", "TXT · книги"},
+    {"viewer", "grid", "Фотографии", "PNG · JPEG"},
+    {"clock", "clock", "Часы", "время · таймер"},
     {"apps", "grid", "Приложения", ""},
     {"browser", "globe", "Браузер", "dillo · офлайн"},
 };
@@ -359,6 +363,12 @@ struct Home : ScreenView {
             if (hit(x, y, c.x, c.y, c.w, c.h)) {
                 if (c.id == "player" && hit(x, y, 400, 156, 60, 60))
                     return tap_toggle();
+                if ((c.id == "browser" && apphost_is_browser()) ||
+                    (c.id == "terminal" && apphost_active() &&
+                     !apphost_is_browser())) {
+                    apphost_resume();
+                    return true;
+                }
                 app.open(c.id.c_str());
                 return true;
             }

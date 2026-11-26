@@ -1,5 +1,6 @@
 #include "graphite.h"
 #include "pins.h"
+#include "input.h"
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -16,7 +17,7 @@ namespace {
 
 const char *kPath = "/home/user/.config/graphite/pins";
 const size_t kMax = 16;
-const char *kDefaults[] = {"player", "files", "terminal", "set-root", "notes"};
+const char *kDefaults[] = {"player", "files", "terminal", "set-root", "notes", "reader"};
 
 std::vector<std::string> g_ids;
 bool g_loaded = false;
@@ -123,7 +124,7 @@ struct Entry {
 };
 
 // Only screens that exist in this shell: no camera, gallery, calculator,
-// clock, reader or info in v1. Browser is a launcher for dillo.
+// clock or info in v1. Browser is a launcher for dillo.
 const Entry kApps[] = {
     {"player",   "Музыка",    "плеер",          "music"},
     {"files",    "Файлы",     "/media/sd",      "folder"},
@@ -131,6 +132,10 @@ const Entry kApps[] = {
     {"browser",  "Браузер",   "dillo · офлайн", "globe"},
     {"set-root", "Настройки", "тема и звук",    "sliders"},
     {"notes",    "Заметки",   "заметки",        "note"},
+    {"reader",   "Читалка",   "TXT-книги",      "note"},
+    {"viewer",   "Фотографии", "PNG · JPEG",     "grid"},
+    {"clock",    "Часы",      "время · таймер",  "clock"},
+    {"usb",      "USB",       "статус · без переключения", "terminal"},
 };
 
 const int kCount = (int)(sizeof kApps / sizeof kApps[0]);
@@ -139,36 +144,78 @@ const int kRow = 56;
 const int kPinX = 408;   // pin control starts here, 48 px wide
 
 struct Apps : ScreenView {
+    TextField query{120};
+    KbModel keyboard;
+    bool searching = false;
+    bool keyboard_open = false;
+    int scroll = 0, drag_px = 0;
     Apps() { gpins::list(); }
 
     const char *id() const override { return "apps"; }
 
     void draw(Gfx &g) override {
         ui_bg(g);
-        std::string sub = "ВСЕ · " + std::to_string(kCount);
+        std::string sub = searching ? "ПОИСК · " + std::to_string(kCount) : "ВСЕ · " + std::to_string(kCount);
         int y = ui_header(g, "Приложения", sub.c_str(), false);
+        if (searching) {
+            g.rect(24, 64, 432, 40, theme.surf2); g.frame(24, 64, 432, 40, theme.line2);
+            g.text(36, 76, query.text().empty() ? "Поиск приложений…" : query.text(), 14,
+                   query.text().empty() ? theme.dim : theme.fg);
+            g.text(438, 76, "×", 18, theme.dim, TF_CENTER);
+            y = 112;
+        }
 
-        for (int i = 0; i < kCount; i++, y += kRow) {
-            g.hline(0, y, 480, theme.line2);
-            icon(g, kApps[i].icon, 24, y + 16, 24, theme.fg);
-            g.text(60, y + 7, g.fit(kApps[i].name, 16, 340), 16, theme.fg);
-            g.text(60, y + 29, g.fit(kApps[i].meta, 12, 340), 12, theme.dim);
+        int shown = 0;
+        for (int i = 0; i < kCount; i++) {
+            std::string hay = std::string(kApps[i].name) + " " + kApps[i].meta;
+            std::string q = query.text();
+            // ASCII-insensitive; UTF-8 Russian remains exact-match friendly.
+            for (char &c : hay) if (c >= 'A' && c <= 'Z') c += 32;
+            for (char &c : q) if (c >= 'A' && c <= 'Z') c += 32;
+            if (searching && !q.empty() && hay.find(q) == std::string::npos) continue;
+            int ry = y + shown * kRow - scroll;
+            if (ry < y - kRow || ry >= (searching && keyboard_open ? 512 : 800)) { shown++; continue; }
+            g.hline(0, ry, 480, theme.line2);
+            icon(g, kApps[i].icon, 24, ry + 16, 24, theme.fg);
+            g.text(60, ry + 7, g.fit(kApps[i].name, 16, 340), 16, theme.fg);
+            g.text(60, ry + 29, g.fit(kApps[i].meta, 12, 340), 12, theme.dim);
 
             bool pinned = gpins::has(kApps[i].id);
             if (pinned) {
-                icon(g, "check", 432, y + 17, 22, theme.accent);
+                icon(g, "check", 432, ry + 17, 22, theme.accent);
             } else {
-                icon(g, "plus", 433, y + 18, 20, theme.dim);
+                icon(g, "plus", 433, ry + 18, 20, theme.dim);
             }
+            shown++;
         }
-
-        g.text(24, kTop + kCount * kRow + 16,
+        if (searching && keyboard_open) keyboard.draw(g);
+        else g.text(24, kTop + kCount * kRow + 16,
                "+ закрепить · ✓ убрать · долгое — правка", 12, theme.dim);
     }
 
     bool tap(int x, int y) override {
-        if (y < kTop || y >= kTop + kCount * kRow) return false;
-        int i = (y - kTop) / kRow;
+        if (y >= 32 && y < 96 && x >= 64 && x < 300) { searching = !searching; query.clear(); scroll = 0; return true; }
+        if (searching && y >= 64 && y < 104) { if (x >= 400) { query.clear(); scroll=0; } else keyboard_open=true; return true; }
+        if (searching && keyboard_open && y >= 512) {
+            InputEvent e = keyboard.hit(x,y);
+            if (e.action == InputAction::Character) query.insert(e.codepoint);
+            else if (e.action == InputAction::Space) query.insert(' ');
+            else if (e.action == InputAction::Backspace) query.backspace();
+            else if (e.action == InputAction::Cancel) keyboard_open = false;
+            scroll = 0; return true;
+        }
+        int start = searching ? 112 : kTop;
+        if (y < start || y >= (searching && keyboard_open ? 512 : 800)) return false;
+        int target = (y - start + scroll) / kRow;
+        int i = -1, n = 0;
+        for (int j=0;j<kCount;j++) {
+            std::string hay=std::string(kApps[j].name)+" "+kApps[j].meta, q=query.text();
+            for(char &c:hay) if(c>='A'&&c<='Z') c+=32;
+            for(char &c:q) if(c>='A'&&c<='Z') c+=32;
+            if(searching&&!q.empty()&&hay.find(q)==std::string::npos) continue;
+            if(n++==target){i=j;break;}
+        }
+        if(i<0) return true;
         if (x >= kPinX) {
             if (!gpins::toggle(kApps[i].id))
                 app.toast("Сначала уберите плитку");
@@ -178,6 +225,29 @@ struct Apps : ScreenView {
             app.open(kApps[i].id);
             return true;
         }
+        return false;
+    }
+
+    bool drag(int, int, int, int dy) override {
+        int matches = 0;
+        for(int i=0;i<kCount;i++) {
+            std::string hay=std::string(kApps[i].name)+" "+kApps[i].meta, q=query.text();
+            for(char &c:hay) if(c>='A'&&c<='Z') c+=32;
+            for(char &c:q) if(c>='A'&&c<='Z') c+=32;
+            if(!searching||q.empty()||hay.find(q)!=std::string::npos) ++matches;
+        }
+        int max = matches*kRow - (searching ? 7*kRow : 12*kRow);
+        if(max<0) max=0;
+        drag_px += dy; int rows=drag_px/kRow; if(!rows) return false;
+        drag_px -= rows*kRow; int next=scroll-rows*kRow;
+        if (next < 0) next = 0;
+        if (next > max) next = max;
+        bool changed=next!=scroll; scroll=next; return changed;
+    }
+
+    bool key(int k, bool down) override {
+        if (!searching || !down) return false;
+        if (k == 0xff1b || k == 0xff08) { if(keyboard_open) keyboard_open=false; else searching=false; return true; }
         return false;
     }
 

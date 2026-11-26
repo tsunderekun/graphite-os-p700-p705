@@ -14,6 +14,7 @@
 //   * folders are copied recursively, symlinks are skipped, existing
 //     destinations are never overwritten.
 #include "graphite.h"
+#include "input.h"
 #include "screens.h"
 
 #include <X11/keysym.h>
@@ -21,6 +22,7 @@
 #include <X11/XKBlib.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <strings.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -28,6 +30,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <strings.h>
 #include <cctype>
 #include <cerrno>
 #include <cstdio>
@@ -59,29 +62,6 @@ bool hit(int x, int y, int rx, int ry, int rw, int rh) {
 }
 
 // ---------------------------------------------------------------- text
-void append_utf8(std::string &s, unsigned cp) {
-    if (cp < 0x80) {
-        s += (char)cp;
-    } else if (cp < 0x800) {
-        s += (char)(0xC0 | (cp >> 6));
-        s += (char)(0x80 | (cp & 0x3F));
-    } else if (cp < 0x10000) {
-        s += (char)(0xE0 | (cp >> 12));
-        s += (char)(0x80 | ((cp >> 6) & 0x3F));
-        s += (char)(0x80 | (cp & 0x3F));
-    } else {
-        s += (char)(0xF0 | (cp >> 18));
-        s += (char)(0x80 | ((cp >> 12) & 0x3F));
-        s += (char)(0x80 | ((cp >> 6) & 0x3F));
-        s += (char)(0x80 | (cp & 0x3F));
-    }
-}
-
-void pop_utf8(std::string &s) {
-    while (!s.empty() && ((unsigned char)s.back() & 0xC0) == 0x80) s.pop_back();
-    if (!s.empty()) s.pop_back();
-}
-
 std::string trim_spaces(const std::string &s) {
     size_t a = 0, b = s.size();
     while (a < b && (s[a] == ' ' || s[a] == '\t')) a++;
@@ -134,13 +114,15 @@ unsigned shifted_cp(unsigned long ks, unsigned cp, bool shift_hint) {
 }
 
 // ---------------------------------------------------------------- names/paths
-bool is_text_name(const std::string &n) {
-    size_t d = n.find_last_of('.');
-    if (d == std::string::npos || d + 1 >= n.size()) return false;
-    std::string e;
-    for (size_t i = d + 1; i < n.size(); i++)
-        e += (char)std::tolower((unsigned char)n[i]);
-    return e == "txt" || e == "md" || e == "log" || e == "conf";
+bool is_openable_name(const std::string &n) {
+    std::string lower = n;
+    for (char &c : lower) c = (char)std::tolower((unsigned char)c);
+    auto ends = [&lower](const char *suffix) {
+        size_t len = std::strlen(suffix);
+        return lower.size() >= len && lower.compare(lower.size() - len, len, suffix) == 0;
+    };
+    return ends(".txt") || ends(".fb2") || ends(".fb2.zip") || ends(".png") ||
+           ends(".jpg") || ends(".jpeg");
 }
 
 bool is_dot_name(const std::string &n) { return !n.empty() && n[0] == '.'; }
@@ -179,10 +161,18 @@ bool under(const std::string &p, const char *root) {
 
 // The shell runs as root; only user media and home are writable here.
 bool can_write(const std::string &p) {
-    static const char *roots[] = {"/media", "/mnt", "/sdcard", "/home",
+    char resolved[PATH_MAX];
+    std::string candidate = p;
+    // Resolve existing targets; for a new leaf resolve its parent so a
+    // symlinked directory cannot grant access to an otherwise denied tree.
+    if (!realpath(candidate.c_str(), resolved)) {
+        std::string parent = parent_of(candidate);
+        if (!realpath(parent.c_str(), resolved)) return false;
+        candidate = std::string(resolved) + "/" + base_of(candidate);
+    } else candidate = resolved;
+    static const char *roots[] = {"/home/user", "/media/sd", "/media",
                                   "/tmp", "/var/tmp"};
-    for (const char *r : roots)
-        if (under(p, r)) return true;
+    for (const char *r : roots) if (under(candidate, r)) return true;
     return false;
 }
 
@@ -312,6 +302,7 @@ struct Job {
     bool move_src = false;
     bool from_clip = false;
     bool cancel = false;
+    bool cross_fs_move = false;
 
     std::vector<Op> ops;
     size_t op = 0;
@@ -360,6 +351,8 @@ struct Files : ScreenView {
     bool preview_select = false;
     bool shift_held = false;
     bool cut = false;
+    bool filtering = false;
+    TextField filter_field{120};
 
     Clip clip;
     Job job;
@@ -368,6 +361,8 @@ struct Files : ScreenView {
     int dlg_idx = -1;
     std::string dlg_title;
     std::string dlg_value;
+    TextField text_field{240};
+    KbModel keyboard;
     std::string dlg_hint;
 
     // confirm-delete snapshot
@@ -546,8 +541,12 @@ struct Files : ScreenView {
         });
     }
 
-    int rows_visible() const { return selecting ? ROWS_SELECT : ROWS_NORMAL; }
-    int total_rows() const { return (int)ents.size() + 1; }  // + ".."
+    int rows_visible() const { return filtering ? 7 : selecting ? ROWS_SELECT : ROWS_NORMAL; }
+    int total_rows() const {
+        if (!filtering || filter_field.text().empty()) return (int)ents.size() + 1;
+        int n=1; for (const Ent &e:ents) if (strcasestr(e.name.c_str(),filter_field.text().c_str())) ++n;
+        return n;
+    }
 
     int max_top() const {
         int m = total_rows() - rows_visible();
@@ -580,6 +579,7 @@ struct Files : ScreenView {
             return;
         }
         path = norm_dir(np);
+        filter_field.clear(); filtering = false;
         hist.push_back(old);
         scroll = 0;
         selecting = false;
@@ -602,6 +602,7 @@ struct Files : ScreenView {
             return;
         }
         path = norm_dir(np);
+        filter_field.clear(); filtering = false;
         (void)old;
         scroll = 0;
         selecting = false;
@@ -688,7 +689,21 @@ struct Files : ScreenView {
         int i = (y - LIST_Y) / ROW_H;
         int idx = top_row() + i;
         if (idx >= total_rows()) return -1;
-        return idx;
+        if (!filtering) return idx;
+        std::vector<int> vi=visible_indices();
+        if(idx<0 || (size_t)idx>=vi.size()) return -1;
+        return vi[(size_t)idx] < 0 ? 0 : vi[(size_t)idx]+1;
+    }
+
+    std::vector<int> visible_indices() const {
+        std::vector<int> out;
+        const std::string &q = filter_field.text();
+        out.push_back(-1); // parent row
+        for (size_t i=0;i<ents.size();++i) {
+            if (!q.empty() && strcasestr(ents[i].name.c_str(), q.c_str()) == nullptr) continue;
+            out.push_back((int)i);
+        }
+        return out;
     }
 
     // ------------------------------------------------------------ clipboard
@@ -849,6 +864,7 @@ struct Files : ScreenView {
         }
         Job j;
         int exists = 0, self = 0, inside = 0;
+        size_t planned_before = 0;
         for (const std::string &src : srcs) {
             struct stat st;
             if (lstat(src.c_str(), &st) != 0) {
@@ -869,6 +885,7 @@ struct Files : ScreenView {
             }
             std::string dst = join_path(path, base_of(src));
             struct stat dst_st;
+            if (!can_write(dst)) { j.skipped++; continue; }
             if (lstat(dst.c_str(), &dst_st) == 0) {
                 exists++;
                 continue;
@@ -880,7 +897,12 @@ struct Files : ScreenView {
                 r.dst = dst;
                 j.ops.push_back(r);
             } else {
-                plan_copy(src, dst, false, j.ops, 0, j.skipped);
+                planned_before = j.ops.size();
+                if (!plan_copy(src, dst, false, j.ops, 0, j.skipped)) {
+                    j.ops.resize(planned_before);
+                    app.toast("Копирование прервано: лимит глубины/операций/детей");
+                    return;
+                }
             }
         }
         if (j.ops.empty()) {
@@ -958,7 +980,7 @@ struct Files : ScreenView {
         job.cur_dst = o.dst;
         job.file_done = 0;
         job.file_size = o.size;
-        job.fd_in = ::open(o.src.c_str(), O_RDONLY);
+        job.fd_in = ::open(o.src.c_str(), O_RDONLY | O_NOFOLLOW);
         if (job.fd_in < 0) {
             job.skipped++;
             job.op++;
@@ -987,7 +1009,7 @@ struct Files : ScreenView {
         } else {
             job.files++;
             job.ok++;
-            if (job.move_src && unlink(job.cur_src.c_str()) != 0) job.errors++;
+            if (job.move_src && !job.cross_fs_move && unlink(job.cur_src.c_str()) != 0) job.errors++;
         }
         job.cur.clear();
         job.op++;
@@ -1113,7 +1135,9 @@ struct Files : ScreenView {
                     job.ok++;
                     job.dirs++;
                 } else if (errno == EEXIST) {
-                    job.ok++;
+                    struct stat st;
+                    if (lstat(o.dst.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) job.ok++;
+                    else { job.errors++; if (job.err1.empty()) job.err1 = base_of(o.dst); }
                 } else {
                     job.errors++;
                     if (job.err1.empty()) job.err1 = base_of(o.dst);
@@ -1121,22 +1145,35 @@ struct Files : ScreenView {
                 job.op++;
                 break;
             case OP_RMDIR:
-                if (rmdir(o.src.c_str()) == 0) job.ok++;
-                else job.errors++;
+                if (job.cross_fs_move && job.errors) { job.skipped++; }
+                else { struct stat st; if (lstat(o.src.c_str(), &st) != 0 || !S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode) || !can_write(o.src)) job.errors++; else if (rmdir(o.src.c_str()) == 0) job.ok++; else job.errors++; }
                 job.op++;
                 break;
             case OP_UNLINK:
-                if (unlink(o.src.c_str()) == 0) job.ok++;
-                else job.errors++;
+                if (job.cross_fs_move && job.errors) { job.skipped++; }
+                else { struct stat st; if (lstat(o.src.c_str(), &st) != 0 || S_ISDIR(st.st_mode) || !can_write(o.src)) job.errors++; else if (unlink(o.src.c_str()) == 0) job.ok++; else job.errors++; }
                 job.op++;
                 break;
             case OP_RENAME: {
-                if (rename(o.src.c_str(), o.dst.c_str()) == 0) {
+                struct stat srcst, dstst;
+                if (!can_write(o.src) || !can_write(o.dst) || lstat(o.src.c_str(), &srcst) != 0 || S_ISLNK(srcst.st_mode) || lstat(o.dst.c_str(), &dstst) == 0) {
+                    job.errors++; job.op++;
+                } else if (rename(o.src.c_str(), o.dst.c_str()) == 0) {
                     job.ok++;
                     job.op++;
                 } else if (errno == EXDEV) {
                     std::vector<Op> plan;
-                    plan_copy(o.src, o.dst, true, plan, 0, job.skipped);
+                    if (!plan_copy(o.src, o.dst, false, plan, 0, job.skipped)) {
+                        job.errors++; job.op++; break;
+                    }
+                    std::vector<Op> removals;
+                    size_t skipped = 0;
+                    if (!plan_delete(o.src, removals, 0, skipped)) {
+                        job.skipped += skipped;
+                        job.errors++; job.op++; break;
+                    }
+                    plan.insert(plan.end(), removals.begin(), removals.end());
+                    job.cross_fs_move = true;
                     if (plan.empty()) {
                         job.errors++;
                         if (job.err1.empty()) job.err1 = base_of(o.src);
@@ -1178,6 +1215,7 @@ struct Files : ScreenView {
         }
         dlg_title = "Переименовать";
         dlg_value = ents[(size_t)dlg_idx].name;
+        text_field.set_text(dlg_value);
         dlg_hint = "Ввод с клавиатуры · Enter — ОК · Esc — отмена";
         modal = M_RENAME;
     }
@@ -1190,6 +1228,7 @@ struct Files : ScreenView {
         dlg_idx = -1;
         dlg_title = "Новая папка";
         dlg_value.clear();
+        text_field.clear();
         dlg_hint = "Ввод с клавиатуры · Enter — создать · Esc — отмена";
         modal = M_MKDIR;
     }
@@ -1243,22 +1282,28 @@ struct Files : ScreenView {
         props_free = free_str.empty() ? free_at(path) : free_str;
         if (props_folder || S_ISDIR(st.st_mode)) {
             props_open = "—";
-        } else if (is_text_name(props_path)) {
-            props_open = "Заметки";
+        } else if (is_openable_name(props_path)) {
+            std::string lower = props_path;
+            for (char &c : lower) c = (char)std::tolower((unsigned char)c);
+            bool image = (lower.size() >= 4 && (lower.compare(lower.size()-4,4,".png")==0 || lower.compare(lower.size()-4,4,".jpg")==0)) ||
+                         (lower.size() >= 5 && lower.compare(lower.size()-5,5,".jpeg")==0);
+            props_open = image ? "Просмотрщик" : "Читалка";
             props_text = true;
-        } else {
+        } else if (!props_folder && props_type != "Папка") {
             props_open = "Нет приложения";
         }
         modal = M_PROPS;
     }
 
     void commit_text() {
-        std::string name = trim_spaces(dlg_value);
+        std::string name = trim_spaces(text_field.text());
         if (name.empty()) {
             app.toast("Имя не может быть пустым");
             return;
         }
-        if (name == "." || name == ".." || name.find('/') != std::string::npos) {
+        bool control = false;
+        for (unsigned char c : name) if (c < 0x20 || c == 0x7f) control = true;
+        if (name == "." || name == ".." || name.find('/') != std::string::npos || control) {
             app.toast("Недопустимое имя");
             return;
         }
@@ -1332,8 +1377,15 @@ struct Files : ScreenView {
             return;
         }
         icon(g, "back", 15, hy + 21, 22, theme.fg);
-        g.text(60, hy + 10, "Файлы", 24, theme.fg, TF_LIGHT);
-        g.text(60, hy + 40, g.fit(crumb_path(), 11, 250), 11, theme.dim);
+        if (filtering) {
+            g.rect(60, hy + 8, 236, 48, theme.surf2); g.frame(60, hy + 8, 236, 48, theme.line2);
+            g.text(70, hy + 24, filter_field.text().empty() ? "Фильтр…" : filter_field.text(), 14,
+                   filter_field.text().empty() ? theme.dim : theme.fg);
+            g.text(292, hy + 22, "×", 18, theme.dim, TF_CENTER);
+        } else {
+            g.text(60, hy + 10, "Файлы", 24, theme.fg, TF_LIGHT);
+            g.text(60, hy + 40, g.fit(crumb_path(), 11, 250), 11, theme.dim);
+        }
 
         g.text(340, hy + 24, sort_label(sort_mode), 11, theme.dim, TF_CENTER);
         g.text(398, hy + 24, "СКР", 11, show_hidden ? theme.accent : theme.dim,
@@ -1344,7 +1396,8 @@ struct Files : ScreenView {
 
     void draw_rows(Gfx &g) {
         int top = top_row();
-        int total = total_rows();
+        std::vector<int> vi = visible_indices();
+        int total = (int)vi.size();
         int vis = rows_visible();
         for (int i = 0; i < vis; i++) {
             int idx = top + i;
@@ -1352,7 +1405,8 @@ struct Files : ScreenView {
             int y = LIST_Y + i * ROW_H;
             g.hline(0, y + ROW_H - 1, 480, theme.line2);
 
-            if (idx == 0) {
+            int ent_idx = vi[(size_t)idx];
+            if (ent_idx < 0) {
                 int ix = selecting ? 60 : 24;
                 icon(g, "back", ix, y + 16, 24, theme.dim);
                 g.text(ix + 36, y + 18, "..", 16, theme.fg);
@@ -1360,7 +1414,7 @@ struct Files : ScreenView {
                 continue;
             }
 
-            const Ent &e = ents[(size_t)idx - 1];
+            const Ent &e = ents[(size_t)ent_idx];
             bool picked = sel.count(e.name) != 0;
             if (picked) {
                 g.rect(0, y, 480, ROW_H - 1, theme.sel);
@@ -1496,18 +1550,20 @@ struct Files : ScreenView {
 
     void draw_modal(Gfx &g) {
         if (modal == M_RENAME || modal == M_MKDIR) {
-            card(g, 20, 232, 440, 292);
-            g.text(40, 252, dlg_title.c_str(), 20, theme.fg, TF_BOLD);
-            g.rect(40, 288, 400, 52, theme.surf2);
-            g.frame(40, 288, 400, 52, theme.line2);
-            std::string shown = g.fit(dlg_value, 16, 370);
-            g.text(52, 306, shown, 16, theme.fg);
+            card(g, 20, 192, 440, 304);
+            g.text(40, 212, dlg_title.c_str(), 20, theme.fg, TF_BOLD);
+            g.rect(40, 248, 400, 52, theme.surf2);
+            g.frame(40, 248, 400, 52, theme.line2);
+            const std::string &value = text_field.text();
+            std::string shown = g.fit(value, 16, 370);
+            g.text(52, 266, shown, 16, theme.fg);
             int cx = 52 + g.textw(shown, 16);
-            if (cx < 428) g.rect(cx + 1, 302, 2, 22, theme.accent);
-            g.text(40, 352, g.fit(dlg_hint, 11, 400), 11, theme.dim);
-            bar_button(g, 40, 448, 120, 48, "ОЧИСТИТЬ", !dlg_value.empty());
-            bar_button(g, 176, 448, 130, 48, "ОТМЕНА", true);
-            bar_button(g, 322, 448, 118, 48, "ОК", true, true);
+            if (cx < 428) g.rect(cx + 1, 262, 2, 22, theme.accent);
+            g.text(40, 312, g.fit(dlg_hint, 11, 400), 11, theme.dim);
+            bar_button(g, 40, 432, 120, 48, "ОЧИСТИТЬ", !value.empty());
+            bar_button(g, 176, 432, 130, 48, "ОТМЕНА", true);
+            bar_button(g, 322, 432, 118, 48, "ОК", true, true);
+            keyboard.draw(g);
             return;
         }
         if (modal == M_CONFIRM) {
@@ -1568,7 +1624,8 @@ struct Files : ScreenView {
         ui_bg(g);
         draw_header(g);
         draw_rows(g);
-        draw_footer(g);
+        if (filtering && modal == M_NONE) keyboard.draw(g);
+        else draw_footer(g);
         if (selecting) draw_select_bar(g);
         if (menu_open) draw_menu(g);
         if (job.active) draw_job(g);
@@ -1578,15 +1635,15 @@ struct Files : ScreenView {
     // ------------------------------------------------------------ input
     void ui_tap_modal(int x, int y) {
         if (modal == M_RENAME || modal == M_MKDIR) {
-            if (hit(x, y, 40, 448, 120, 48)) {
-                dlg_value.clear();
+            if (hit(x, y, 40, 432, 120, 48)) {
+                dlg_value.clear(); text_field.clear();
                 return;
             }
-            if (hit(x, y, 176, 448, 130, 48)) {
+            if (hit(x, y, 176, 432, 130, 48)) {
                 modal = M_NONE;
                 return;
             }
-            if (hit(x, y, 322, 448, 118, 48)) {
+            if (hit(x, y, 322, 432, 118, 48)) {
                 commit_text();
                 return;
             }
@@ -1613,8 +1670,7 @@ struct Files : ScreenView {
             if (props_text && hit(x, y, 260, 560, 180, 48)) {
                 std::string p = props_path;
                 modal = M_NONE;
-                app.open_path = p;
-                app.open("notes");
+                app.open_file(p);
                 return;
             }
             return;
@@ -1684,8 +1740,12 @@ struct Files : ScreenView {
             else if (x >= 400) select_all_toggle();
             return;
         }
+        if (filtering && x >= 60 && x < 300) return;
+        if (filtering && x >= 276 && x < 320) { filter_field.clear(); scroll=0; return; }
         if (x < 64) {
             app.open("home");
+        } else if (x >= 64 && x < 300) {
+            filtering = true; filter_field.clear(); scroll = 0;
         } else if (x >= 300 && x < 370) {
             sort_mode = (sort_mode + 1) % 3;
             resort();
@@ -1710,8 +1770,34 @@ struct Files : ScreenView {
             return true;
         }
         if (modal != M_NONE) {
+            if ((modal == M_RENAME || modal == M_MKDIR) && y >= 512) {
+                InputEvent e = keyboard.hit(x, y);
+                switch (e.action) {
+                case InputAction::Character: text_field.insert(e.codepoint); break;
+                case InputAction::Space: text_field.insert(' '); break;
+                case InputAction::Backspace: text_field.backspace(); break;
+                case InputAction::DeleteForward: text_field.erase_forward(); break;
+                case InputAction::Left: text_field.left(); break;
+                case InputAction::Right: text_field.right(); break;
+                case InputAction::Home: text_field.home(); break;
+                case InputAction::End: text_field.end(); break;
+                case InputAction::Enter: commit_text(); break;
+                case InputAction::Cancel: modal = M_NONE; break;
+                default: break;
+                }
+                dlg_value = text_field.text();
+                return true;
+            }
             ui_tap_modal(x, y);
             return true;
+        }
+        if (filtering && y >= 512) {
+            InputEvent e=keyboard.hit(x,y);
+            if(e.action==InputAction::Character) filter_field.insert(e.codepoint);
+            else if(e.action==InputAction::Space) filter_field.insert(' ');
+            else if(e.action==InputAction::Backspace) filter_field.backspace();
+            else if(e.action==InputAction::Cancel) filtering=false;
+            scroll=0; return true;
         }
         if (menu_open) {
             ui_tap_menu(x, y);
@@ -1759,11 +1845,8 @@ struct Files : ScreenView {
         const Ent &e = ents[(size_t)idx - 1];
         if (e.dir) {
             enter(e.name);
-        } else if (is_text_name(e.name)) {
-            app.open_path = join_path(path, e.name);
-            app.open("notes");
         } else {
-            app.toast("Нет приложения для этого типа");
+            app.open_file(join_path(path, e.name));
         }
         return true;
     }
@@ -1812,6 +1895,13 @@ struct Files : ScreenView {
             return false;
         }
         if (!down) return false;
+        if (filtering) {
+            if (k == XK_Escape || k == XF86XK_Back) { filtering=false; filter_field.clear(); return true; }
+            if (k == XK_BackSpace) { filter_field.backspace(); scroll=0; return true; }
+            unsigned cp=shifted_cp(k,keysym_cp(k),shift_held);
+            if(cp>=0x20 && cp!=0x7f) { filter_field.insert(cp); scroll=0; return true; }
+            return true;
+        }
 
         if (modal == M_RENAME || modal == M_MKDIR) {
             if (k == XK_Escape || k == XF86XK_Back) {
@@ -1823,12 +1913,18 @@ struct Files : ScreenView {
                 return true;
             }
             if (k == XK_BackSpace || k == XK_Delete) {
-                pop_utf8(dlg_value);
+                if (k == XK_BackSpace) text_field.backspace(); else text_field.erase_forward();
+                dlg_value = text_field.text();
                 return true;
             }
+            if (k == XK_Left) { text_field.left(); return true; }
+            if (k == XK_Right) { text_field.right(); return true; }
+            if (k == XK_Home) { text_field.home(); return true; }
+            if (k == XK_End) { text_field.end(); return true; }
+            if (k == XK_Delete) { text_field.erase_forward(); dlg_value = text_field.text(); return true; }
             unsigned cp = shifted_cp(k, keysym_cp(k), shift_held);
-            if (cp >= 0x20 && cp != 0x7F && cp != '/' && dlg_value.size() < 240)
-                append_utf8(dlg_value, cp);
+            if (cp >= 0x20 && cp != 0x7F && cp != '/') text_field.insert(cp);
+            dlg_value = text_field.text();
             return true;  // modal text field: swallow the rest
         }
         if (modal == M_CONFIRM) {
