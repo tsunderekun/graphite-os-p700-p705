@@ -4,7 +4,7 @@
 #   sh os/preview.sh home            -> artifacts/host/home.png  (display :99)
 #   sh os/preview.sh home :93        -> second agent's own display
 #
-# Run inside WSL:  wsl -e bash -lc "cd <repo> && sh os/preview.sh home"
+# Run inside WSL:  wsl -e bash -lc "cd /path/to/repo && sh os/preview.sh home"
 set -e
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$HERE"
