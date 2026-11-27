@@ -87,7 +87,7 @@ fontconfig).
 
 ```sh
 GRAPHITE_FONTS=/usr/share/fonts/medeo ./build/graphite-shell
-GRAPHITE_SCREEN=lock GRAPHITE_FONTS=/path/to/repo/os/fonts/medeo \
+GRAPHITE_SCREEN=lock GRAPHITE_FONTS=fonts/medeo \
     sh os/preview.sh medeo-lock :91
 ```
 

@@ -174,7 +174,7 @@ struct SetLab : ScreenView {
         net = st.empty() ? "wlan0 · нет" : "wlan0 · " + st;
 
         if (dir_ok("/home/user/notes/qa") || dir_ok("../notes/qa") ||
-            dir_ok("/path/to/repo/notes/qa") || dir_ok("notes/qa"))
+            dir_ok("notes/qa"))
             qa = "notes/qa · smoke · burn-in";
         else
             qa = "на устройстве нет · по SSH";

@@ -8,9 +8,10 @@ below come from other projects and keep their original licenses.
 ### DejaVu Sans (`shell/fonts/DejaVuSans*.ttf`)
 
 Bitstream Vera Fonts Copyright (c) 2003 Bitstream, Inc. DejaVu changes are in
-the public domain. The full text is distributed with the DejaVu package
-(`/usr/share/doc/fonts-dejavu*/copyright` on Debian/Alpine) and is available at
-<https://dejavu-fonts.github.io/License.html>.
+the public domain. The full text ships with the fonts in
+`shell/fonts/LICENSE-DejaVu.txt` (also available at
+<https://dejavu-fonts.github.io/License.html> and
+`/usr/share/doc/fonts-dejavu*/copyright` on Debian/Alpine).
 
 The license permits free use, modification and redistribution, including in
 bundled form, provided the copyright notice and license are kept with the
